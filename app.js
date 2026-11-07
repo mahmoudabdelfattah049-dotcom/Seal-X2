@@ -15,6 +15,7 @@ function setAuthMode(mode){
  authMode=mode;
  $$("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
  $("#displayNameWrap").hidden=mode!=="signup";
+  const fullNameInput=$("[name=\"displayName\"]");if(fullNameInput)fullNameInput.required=mode==="signup";
  $("#authTitle").textContent=mode==="signup"?"إنشاء حساب طالب":"تسجيل الدخول";
  $("#authDescription").textContent=mode==="signup"?"اختر اسم مستخدم وكلمة مرور. الحساب ينتظر موافقة المدرس.":"أدخل اسم المستخدم وكلمة المرور للمتابعة.";
  $("#authForm .auth-submit").textContent=mode==="signup"?"إنشاء الحساب":"تسجيل الدخول";
@@ -303,7 +304,7 @@ async function submitAuth(event){
  try{
   if(!/^[a-z0-9_]{3,24}$/.test(username))throw new Error("اسم المستخدم يجب أن يكون من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _.");
   if(authMode==="signup"){
-   const name=String(v.get("displayName")||"").trim();if(name.split(/\s+/).length<3)throw new Error("اكتب اسمك الرباعي كاملًا لإنشاء الحساب.");
+   const name=String(v.get("displayName")||"").trim();if(name.split(/\s+/).length<4)throw new Error("اكتب أربعة أسماء كاملة على الأقل لإنشاء الحساب.");
    if(["admin","administrator","owner","root","support"].includes(username))throw new Error("اسم المستخدم محجوز.");
    const internalEmail=username+"@accounts.sealx2.invalid";
    const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,full_name:name,username}}});
