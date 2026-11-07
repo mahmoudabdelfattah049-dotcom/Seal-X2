@@ -21,18 +21,21 @@ function setAuthMode(mode){
 }
 async function loadProfile(){
  profile=null;if(!sessionUser)return;
- const {data,error}=await db.from("profiles").select("display_name,role").eq("id",sessionUser.id).maybeSingle();
+ const {data,error}=await db.from("profiles").select("display_name,role,is_approved,email").eq("id",sessionUser.id).maybeSingle();
  if(error){console.error("Profile:",error);return} profile=data;
 }
 function updateAuthUI(){
- const logged=!!sessionUser;
+ const logged=!!sessionUser, pending=logged&&profile?.is_approved===false;
  $("#authOpen").hidden=logged;$("#logoutBtn").hidden=!logged;$("#userBadge").hidden=!logged;
+ $("#approvalGate").hidden=!pending;$("#metrics").hidden=pending;
+ $("#exams").hidden=pending;$("#library").hidden=pending;$("#announcements").hidden=pending;
+ $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;
  $("#userBadge").textContent=profile?.display_name||sessionUser?.email||"";
- $("#dashboard").hidden=!logged;$("#teacherPanel").hidden=!isStaff();$("#ownerTools").hidden=!isOwner();
+ $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
- if(logged)loadAttempts();
- if(isStaff()){loadSubjects();loadStaffExams()}
- if(isOwner())loadAccounts();
+ if(logged&&!pending)loadAttempts();
+ if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals()}
+ if(isOwner()&&!pending)loadAccounts();
  $("#roleLabel").textContent=isOwner()?"OWNER CONTROL":profile?.role==="admin"?"ADMIN WORKSPACE":profile?.role==="teacher"?"TEACHER WORKSPACE":"STAFF";
 }
 async function refreshSession(){
@@ -123,6 +126,22 @@ async function loadStaffExams(){
   if(error){console.error(error);toast("تعذر تغيير حالة النشر.")}else{toast("تم تحديث حالة الامتحان.");await Promise.all([loadStaffExams(),loadExams()])}b.disabled=false;
  }));
 }
+
+async function loadPendingApprovals(){
+ const t=$("#pendingApprovalList");if(!t||!isStaff())return;
+ const {data,error}=await db.from("profiles").select("id,display_name,email,role,created_at,is_approved").eq("is_approved",false).eq("role","student").order("created_at",{ascending:true}).limit(100);
+ if(error){console.error(error);t.textContent="تعذر تحميل طلبات الانضمام.";return}
+ if(!data?.length){t.innerHTML='<div class="empty-state">لا توجد حسابات في انتظار الموافقة حالياً.</div>';return}
+ t.innerHTML=data.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>'+esc(a.email||"بريد غير متاح")+' · '+dateLabel(a.created_at)+'</small></span><button type="button" class="btn btn-primary btn-small" data-approve-user="'+a.id+'">قبول الطالب</button></div>').join("");
+ $("[data-approve-user]").forEach(b=>b.addEventListener("click",async()=>{
+  if(!window.confirm("تأكيد قبول هذا الطالب ومنحه صلاحية استخدام المنصة؟"))return;
+  b.disabled=true;
+  const {error}=await db.rpc("staff_approve_user",{p_user_id:b.dataset.approveUser});
+  if(error){console.error(error);toast("تعذر قبول الحساب.");b.disabled=false;return}
+  toast("تم قبول الطالب وتفعيل حسابه.");await loadPendingApprovals();
+ }));
+}
+
 async function loadAccounts(){
  const t=$("#accountList");if(!t||!isOwner())return;
  const {data,error}=await db.from("profiles").select("id,display_name,role,created_at").order("created_at",{ascending:false}).limit(100);
@@ -171,10 +190,10 @@ async function submitAuth(event){
    const {data,error}=await db.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:window.location.origin+window.location.pathname}});
    if(error)throw error;
    if(data.session){$("#authDialog").close();await refreshSession();toast("تم إنشاء الحساب بنجاح.")}
-   else setStatus("#authStatus","تم إنشاء الحساب. افتح بريدك الإلكتروني واضغط رابط التأكيد، ثم ارجع وسجّل الدخول.");
+   else setStatus("#authStatus","تم إنشاء الحساب. فعّل خيار السماح بتسجيل الدخول بالبريد غير المؤكد من إعدادات Supabase، وبعدها يسجّل الطالب ويدخل قائمة انتظار موافقة المدرس.");
   }else{
    const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
-   $("#authDialog").close();await refreshSession();toast("تم تسجيل الدخول.");
+   $("#authDialog").close();await refreshSession();if(profile?.is_approved===false)toast("حسابك في انتظار موافقة المدرس قبل دخول المنصة.");else toast("تم تسجيل الدخول.");
   }
  }catch(e){console.error(e);setStatus("#authStatus",e.message||"تعذر إكمال العملية.",true)}
  finally{b.disabled=false}
