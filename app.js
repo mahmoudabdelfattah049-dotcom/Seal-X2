@@ -30,12 +30,12 @@ function updateAuthUI(){
  $("#authOpen").hidden=logged;$("#logoutBtn").hidden=!logged;$("#userBadge").hidden=!logged;
  $("#approvalGate").hidden=!pending;$("#metrics").hidden=pending;
  $("#exams").hidden=pending;$("#library").hidden=pending;$("#announcements").hidden=pending;
- $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;$("#teacherReportsPanel").hidden=sessionUser?.id!=="5d0f01fe-d999-42e8-bb49-0b87a308e138"||pending;
+ $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;const canViewTeacherReports=sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner();$("#teacherReportsPanel").hidden=!canViewTeacherReports||pending;$("#teacherReportList").hidden=isOwner();
  $("#userBadge").textContent=profile?.display_name||profile?.username||"حساب المستخدم";
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
  if(logged&&!pending){loadAttempts();loadStudentReports();}
- if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();}
+ if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner())loadTeacherReportArchives();}
  if(isOwner()&&!pending)loadAccounts();
  $("#roleLabel").textContent=isOwner()?"OWNER CONTROL":profile?.role==="admin"?"ADMIN WORKSPACE":profile?.role==="teacher"?"TEACHER WORKSPACE":"STAFF";
 }
@@ -107,6 +107,52 @@ async function loadTeacherReports(){
  if(error){console.error("Teacher reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل التقارير. تحقق من صلاحيات قاعدة البيانات.</div>';return}
  if(!data?.length){host.innerHTML='<div class="empty-state">لا توجد تقارير بعد. ستصل تقارير الطلاب هنا تلقائيًا فور تسليم الامتحانات.</div>';return}
  host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
+}
+const reportArchiveCache=new Map();
+function reportPlainText(r){
+ const wrong=Array.isArray(r.wrong_questions)?r.wrong_questions:[];
+ return [
+  "Seal X2 — تقرير نتيجة طالب",
+  "اسم الطالب: "+(r.student_name||"—"),
+  "الامتحان: "+(r.exam_title||"—"),
+  "الدرجة: "+r.score+" / "+r.max_score,
+  "النسبة: "+(r.percentage??"—")+"%",
+  "الحالة: "+(r.passed?"اجتاز":"لم يجتز"),
+  "عدد الإجابات الخاطئة: "+(r.wrong_count??wrong.length),
+  "وقت التسليم: "+reportDate(r.submitted_at),
+  "",
+  ...wrong.flatMap((q,i)=>[
+   "السؤال "+(i+1)+": "+(q.prompt||""),
+   "إجابتك: "+(q.selected_option||"لم تتم الإجابة"),
+   "الإجابة الصحيحة: "+(q.correct_option||""),
+   "—"
+  ])
+ ].join("\n");
+}
+async function loadTeacherReportArchives(){
+ const host=$("#reportArchiveList");if(!host||!(isOwner()||sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))return;
+ host.innerHTML='<div class="empty-state">جارٍ تحميل ملفّي التقارير...</div>';
+ const bucket=db.storage.from("sealx2-report-archive");
+ const {data,error}=await bucket.list("daily",{limit:20,sortBy:{column:"name",order:"desc"}});
+ if(error){console.error("Report archive list:",error);host.innerHTML='<div class="empty-state">تعذر تحميل أرشيف التقارير. تحقق من صلاحيات الحساب.</div>';return}
+ const files=(data||[]).filter(x=>/^\d{4}-\d{2}-\d{2}\.json$/.test(x.name)).sort((a,b)=>b.name.localeCompare(a.name)).slice(0,2);
+ if(!files.length){host.innerHTML='<div class="empty-state">لم يُنشأ أول ملف بعد. سيظهر تلقائيًا في موعد التقرير القادم.</div>';return}
+ const archives=[];
+ for(const file of files){
+  const path="daily/"+file.name;
+  const {data:blob,error:downloadError}=await bucket.download(path);
+  if(downloadError){console.error("Archive download:",downloadError);archives.push({path,file,archive:null});continue}
+  try{const archive=JSON.parse(await blob.text());reportArchiveCache.set(path,archive);archives.push({path,file,archive});}
+  catch(parseError){console.error("Archive parse:",parseError);archives.push({path,file,archive:null});}
+ }
+ host.innerHTML=archives.map(({path,file,archive})=>{
+  if(!archive)return '<article class="report-archive-file"><h4>ملف '+esc(file.name)+'</h4><p class="hint">تعذر قراءة هذا الملف.</p></article>';
+  const reports=Array.isArray(archive.reports)?archive.reports:[];
+  return '<article class="report-archive-file"><div class="report-archive-head"><div><span class="report-kicker">DAILY ARCHIVE · '+(path===archives[0].path?'الأحدث':'الأقدم')+'</span><h4>تقارير يوم '+esc(archive.report_date||file.name.replace(".json",""))+'</h4><small>آخر تحديث: '+reportDate(archive.generated_at)+'</small></div><div class="report-archive-meta"><b>'+Number(archive.count||0)+'</b><small>محاولة</small></div></div><div class="report-archive-stats"><span>المتوسط: <b>'+(archive.average_percentage??"—")+'%</b></span><span>اجتاز: <b>'+Number(archive.passed||0)+'</b></span><span>لم يجتز: <b>'+Number(archive.failed||0)+'</b></span></div><div class="report-archive-students">'+(reports.length?reports.map(r=>{
+   const rid=String(r.report_id||r.student_id||crypto.randomUUID());reportArchiveCache.set(rid,r);
+   return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage??"—")+'%</small></div></div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-copy-archive-report="'+esc(rid)+'">نسخ تقرير الطالب</button></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
+  }).join(""):'<div class="empty-state">لا توجد محاولات مسجلة في هذا اليوم.</div>')+'</div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل ملف اليوم JSON</button></div></article>';
+ }).join("");
 }
 async function loadSubjects(){
  const s=$("#subjectSelect"),{data,error}=await db.from("subjects").select("id,name").order("name");
@@ -388,6 +434,12 @@ function bindEvents(){
  $("#authForm").addEventListener("submit",submitAuth);$("#logoutBtn").addEventListener("click",logout);
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
  $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
+ $("#reportArchiveList").addEventListener("click",async e=>{
+  const copy=e.target.closest("[data-copy-archive-report]");
+  if(copy){const report=reportArchiveCache.get(copy.dataset.copyArchiveReport);if(!report)return;try{await navigator.clipboard.writeText(reportPlainText(report));toast("تم نسخ تقرير الطالب.");}catch(err){console.error(err);toast("تعذر النسخ؛ افتح التقرير وحاول مرة أخرى.");}return;}
+  const download=e.target.closest("[data-download-archive]");
+  if(download){const archive=reportArchiveCache.get(download.dataset.downloadArchive);if(!archive)return;const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=download.dataset.downloadArchive.split("/").pop();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+ });
  $("#addQuestionBtn").addEventListener("click",addQuestion);
  $("#parseExamCodeBtn").addEventListener("click",importExamCode);$("#clearExamCodeBtn").addEventListener("click",()=>{$("#examSourceCode").value="";$("#importPreview").hidden=true;setStatus("#importStatus","");});
  $("#dangerUnlockBtn").addEventListener("click",()=>{if(!isOwner())return toast("هذه المنطقة لمالك المنصة فقط.");if(!dangerUnlocked){if(!window.confirm("تنبيه: أنت على وشك فتح منطقة الإدارة الحساسة. هل تريد المتابعة؟"))return;dangerUnlocked=true;$("#dangerContent").hidden=false;$("#dangerUnlockBtn").textContent="قفل أدوات الطوارئ";loadAccounts();}else{dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}});
