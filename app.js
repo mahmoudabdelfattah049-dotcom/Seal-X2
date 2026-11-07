@@ -108,7 +108,7 @@ function readExamSource(source){
   if(!q||typeof q!=="object"||Array.isArray(q))throw new Error("السؤال رقم "+(i+1)+" ليس كائن سؤال صحيحًا.");
   const prompt=String(q.q??q.prompt??"").trim(),options=q.opts??q.options,correct=Number(q.ans??q.correct_option);
   if(!prompt)throw new Error("نص السؤال رقم "+(i+1)+" غير موجود.");
-  if(!Array.isArray(options)||options.length<2||options.length>6||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("اختيارات السؤال رقم "+(i+1)+" يجب أن تكون من 2 إلى 6 اختيارات نصية غير فارغة.");
+  if(!Array.isArray(options)||options.length!==4||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("السؤال رقم "+(i+1)+" يجب أن يحتوي على أربعة اختيارات نصية غير فارغة بالضبط.");
   if(!Number.isInteger(correct)||correct<0||correct>=options.length)throw new Error("رقم الإجابة الصحيحة في السؤال رقم "+(i+1)+" غير صحيح. استخدم ترقيمًا يبدأ من صفر.");
   return {prompt,options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1)};
  });
