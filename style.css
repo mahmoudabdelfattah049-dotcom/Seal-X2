@@ -146,3 +146,69 @@ dialog.dialog .privacy-note {
 .report-points{display:block;margin-top:7px;color:var(--muted)}
 .report-perfect{padding:12px;color:#79d8ad;background:#45b98a12;border-radius:10px;margin-top:10px}
 @media(max-width:520px){.report-card-head{flex-direction:column}.report-score{align-self:stretch;display:flex;justify-content:space-between;align-items:center}.report-answer{flex-direction:column;gap:3px}}
+
+
+/* Mobile exam session: use a true edge-to-edge scrollable viewport.
+   Native <dialog> centering can calculate a wider intrinsic box on mobile browsers,
+   leaving the RTL form clipped on the inline-start side. */
+@media (max-width: 700px) {
+  html, body { max-width: 100%; overflow-x: hidden; }
+  dialog.dialog.exam-dialog {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    transform: none;
+    direction: rtl;
+  }
+  dialog.dialog.exam-dialog .dialog-card {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: max(22px, env(safe-area-inset-top)) 18px
+             max(24px, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+  dialog.dialog.exam-dialog #questionArea,
+  dialog.dialog.exam-dialog .exam-question,
+  dialog.dialog.exam-dialog .exam-options-list,
+  dialog.dialog.exam-dialog .exam-option {
+    min-width: 0;
+    max-width: 100%;
+  }
+  dialog.dialog.exam-dialog .exam-question h3,
+  dialog.dialog.exam-dialog .exam-option span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  dialog.dialog.exam-dialog .exam-option {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  dialog.dialog.exam-dialog .exam-option input {
+    flex: 0 0 auto;
+    margin-top: 5px;
+  }
+  dialog.dialog.exam-dialog .auth-submit {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 -8px 18px #0d1b2c;
+  }
+}
