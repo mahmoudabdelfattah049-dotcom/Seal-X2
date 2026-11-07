@@ -151,17 +151,27 @@ async function loadAccounts(){
  if(!accounts.length){t.innerHTML='<div class="empty-state">لا توجد حسابات مسجلة.</div>';return}
  t.innerHTML=accounts.map(a=>{
   const self=a.id===sessionUser.id, owner=a.role==="owner";
-  const roleOptions=(self?["owner"]:["student","teacher","admin"]).map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+({student:"طالب",teacher:"مدرس",admin:"مدير",owner:"مالك المنصة"}[r])+'</option>').join("");
-  return '<article class="owner-account" data-owner-account="'+a.id+'"><div class="owner-account-head"><div><b>'+esc(a.display_name||"حساب")+'</b><small>@'+esc(a.username||"بدون اسم مستخدم")+' · '+dateLabel(a.created_at)+'</small><small class="account-id">'+esc(a.id)+'</small></div><span class="account-role">'+(owner?"OWNER":esc(a.role))+'</span></div><div class="owner-account-fields"><label>اسم المستخدم<input data-field="username" value="'+esc(a.username||"")+'" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" '+(self?"":"")+'></label><label>الاسم الظاهر<input data-field="display_name" value="'+esc(a.display_name||"")+'" maxlength="60"></label><label>الصلاحية<select data-field="role" '+(self?"disabled":"")+'>'+roleOptions+'</select></label><label>حالة الحساب<select data-field="approved" '+(self?"disabled":"")+'><option value="true" '+(a.is_approved?"selected":"")+'>مقبول</option><option value="false" '+(!a.is_approved?"selected":"")+'>في انتظار الموافقة</option></select></label></div><div class="owner-account-actions"><button type="button" class="btn btn-outline btn-small" data-save-account>حفظ بيانات الحساب</button><label class="password-reset-field">كلمة مرور جديدة<input data-field="new_password" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label><button type="button" class="btn btn-primary btn-small" data-reset-password>تعيين كلمة المرور</button></div></article>';
+  const roles=self?["owner"]:["student","teacher","admin"];
+  const roleOptions=roles.map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+r+'</option>').join("");
+  return `<article class="owner-account" data-owner-account="${a.id}">
+   <div class="owner-account-head"><div><b>${esc(a.display_name||"حساب")}</b><small>@${esc(a.username||"بدون اسم مستخدم")} · ${dateLabel(a.created_at)}</small><small class="account-id">${esc(a.id)}</small></div><span class="account-role">${owner?"OWNER":esc(a.role)}</span></div>
+   <div class="owner-account-fields">
+    <label>اسم المستخدم<input data-field="username" value="${esc(a.username||"")}" maxlength="24" pattern="[A-Za-z0-9_]{3,24}"></label>
+    <label>الاسم الظاهر<input data-field="display_name" value="${esc(a.display_name||"")}" maxlength="60"></label>
+    <label>الصلاحية<select data-field="role" ${self?"disabled":""}>${roleOptions}</select></label>
+    <label>حالة الحساب<select data-field="approved" ${self?"disabled":""}><option value="true" ${a.is_approved?"selected":""}>مقبول</option><option value="false" ${!a.is_approved?"selected":""}>في انتظار الموافقة</option></select></label>
+   </div>
+   <div class="owner-account-actions"><button type="button" class="btn btn-outline btn-small" data-save-account>حفظ بيانات الحساب</button><label class="password-reset-field">كلمة مرور جديدة<input data-field="new_password" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label><button type="button" class="btn btn-primary btn-small" data-reset-password>تعيين كلمة المرور</button></div>
+  </article>`;
  }).join("");
- $("[data-save-account]").forEach(b=>b.addEventListener("click",async()=>{
+ $$("[data-save-account]").forEach(b=>b.addEventListener("click",async()=>{
   const row=b.closest("[data-owner-account]"),id=row.dataset.ownerAccount;
   const payload={action:"update_account",user_id:id,username:$('[data-field="username"]',row).value,display_name:$('[data-field="display_name"]',row).value,role:$('[data-field="role"]',row).value,is_approved:$('[data-field="approved"]',row).value==="true"};
   b.disabled=true;const {data,error}=await db.functions.invoke("owner-user-admin",{body:payload});b.disabled=false;
   if(error||data?.error){toast(data?.error||"تعذر حفظ الحساب.");return}
   toast("تم حفظ بيانات الحساب.");await loadAccounts();
  }));
- $("[data-reset-password]").forEach(b=>b.addEventListener("click",async()=>{
+ $$("[data-reset-password]").forEach(b=>b.addEventListener("click",async()=>{
   const row=b.closest("[data-owner-account]"),id=row.dataset.ownerAccount,input=$('[data-field="new_password"]',row),password=input.value;
   if(password.length<8||password.length>72){toast("كلمة المرور يجب أن تكون بين 8 و72 حرفًا.");input.focus();return}
   if(!window.confirm("سيتم استبدال كلمة مرور هذا الحساب فورًا. هل تريد المتابعة؟"))return;
