@@ -29,7 +29,7 @@ function updateAuthUI(){
  $("#authOpen").hidden=logged;$("#logoutBtn").hidden=!logged;$("#userBadge").hidden=!logged;
  $("#approvalGate").hidden=!pending;$("#metrics").hidden=pending;
  $("#exams").hidden=pending;$("#library").hidden=pending;$("#announcements").hidden=pending;
- $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;
+ $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;$("#teacherReportsPanel").hidden=sessionUser?.id!=="5d0f01fe-d999-42e8-bb49-0b87a308e138"||pending;
  $("#userBadge").textContent=profile?.display_name||profile?.username||"حساب المستخدم";
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
@@ -303,7 +303,7 @@ async function submitAuth(event){
  try{
   if(!/^[a-z0-9_]{3,24}$/.test(username))throw new Error("اسم المستخدم يجب أن يكون من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _.");
   if(authMode==="signup"){
-   const name=String(v.get("displayName")||"").trim();if(name.split(/\\s+/).length<3)throw new Error("اكتب اسمك الثلاثي كاملًا لإنشاء الحساب.");
+   const name=String(v.get("displayName")||"").trim();if(name.split(/\s+/).length<3)throw new Error("اكتب اسمك الثلاثي كاملًا لإنشاء الحساب.");
    if(["admin","administrator","owner","root","support"].includes(username))throw new Error("اسم المستخدم محجوز.");
    const internalEmail=username+"@accounts.sealx2.invalid";
    const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,full_name:name,username}}});
