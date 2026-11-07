@@ -123,7 +123,9 @@ function importExamCode(){
  const status=$("#importStatus"),preview=$("#importPreview");
  try{
   const parsed=readExamSource($("#examSourceCode").value);
-  if($("#questionBuilder .question-card").length&&!window.confirm("سيتم استبدال الأسئلة الموجودة حاليًا بالأسئلة المستوردة. هل تريد المتابعة؟"))return;
+  const existingCards=$(".question-card",$("#questionBuilder"));
+  const hasEnteredData=existingCards.some(card=>$(".question-prompt",card).value.trim()||$(".question-option",card).some(input=>input.value.trim()));
+  if(hasEnteredData&&!window.confirm("سيتم استبدال الأسئلة الموجودة حاليًا بالأسئلة المستوردة. هل تريد المتابعة؟"))return;
   if(parsed.title)$("#examForm [name=title]").value=parsed.title.slice(0,140);
   if(parsed.description)$("#examForm [name=description]").value=parsed.description.slice(0,500);
   if(parsed.duration)$("#examForm [name=duration]").value=parsed.duration;
