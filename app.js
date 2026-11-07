@@ -16,12 +16,12 @@ function setAuthMode(mode){
  $$("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
  $("#displayNameWrap").hidden=mode!=="signup";
  $("#authTitle").textContent=mode==="signup"?"إنشاء حساب طالب":"تسجيل الدخول";
- $("#authDescription").textContent=mode==="signup"?"الحساب الجديد يحصل تلقائيًا على صلاحية طالب.":"أدخل بريدك الإلكتروني وكلمة المرور للمتابعة.";
+ $("#authDescription").textContent=mode==="signup"?"اختر اسم مستخدم وكلمة مرور. الحساب ينتظر موافقة المدرس.":"أدخل اسم المستخدم وكلمة المرور للمتابعة.";
  $("#authForm .auth-submit").textContent=mode==="signup"?"إنشاء الحساب":"تسجيل الدخول";
 }
 async function loadProfile(){
  profile=null;if(!sessionUser)return;
- const {data,error}=await db.from("profiles").select("display_name,role,is_approved,email").eq("id",sessionUser.id).maybeSingle();
+ const {data,error}=await db.from("profiles").select("display_name,role,is_approved,username").eq("id",sessionUser.id).maybeSingle();
  if(error){console.error("Profile:",error);return} profile=data;
 }
 function updateAuthUI(){
@@ -30,7 +30,7 @@ function updateAuthUI(){
  $("#approvalGate").hidden=!pending;$("#metrics").hidden=pending;
  $("#exams").hidden=pending;$("#library").hidden=pending;$("#announcements").hidden=pending;
  $("#dashboard").hidden=!logged||pending;$("#teacherPanel").hidden=!isStaff()||pending;
- $("#userBadge").textContent=profile?.display_name||sessionUser?.email||"";
+ $("#userBadge").textContent=profile?.display_name||profile?.username||"حساب المستخدم";
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
  if(logged&&!pending)loadAttempts();
@@ -127,13 +127,13 @@ async function loadStaffExams(){
  }));
 }
 
-async function loadPendingApprovals(){
+async async function loadPendingApprovals(){
  const t=$("#pendingApprovalList");if(!t||!isStaff())return;
- const {data,error}=await db.from("profiles").select("id,display_name,email,role,created_at,is_approved").eq("is_approved",false).eq("role","student").order("created_at",{ascending:true}).limit(100);
+ const {data,error}=await db.from("profiles").select("id,display_name,username,role,created_at,is_approved").eq("is_approved",false).eq("role","student").order("created_at",{ascending:true}).limit(100);
  if(error){console.error(error);t.textContent="تعذر تحميل طلبات الانضمام.";return}
  if(!data?.length){t.innerHTML='<div class="empty-state">لا توجد حسابات في انتظار الموافقة حالياً.</div>';return}
- t.innerHTML=data.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>'+esc(a.email||"بريد غير متاح")+' · '+dateLabel(a.created_at)+'</small></span><button type="button" class="btn btn-primary btn-small" data-approve-user="'+a.id+'">قبول الطالب</button></div>').join("");
- $("[data-approve-user]").forEach(b=>b.addEventListener("click",async()=>{
+ t.innerHTML=data.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>@'+esc(a.username||"بدون اسم مستخدم")+' · '+dateLabel(a.created_at)+'</small></span><button type="button" class="btn btn-primary btn-small" data-approve-user="'+a.id+'">قبول الطالب</button></div>').join("");
+ $$("[data-approve-user]").forEach(b=>b.addEventListener("click",async()=>{
   if(!window.confirm("تأكيد قبول هذا الطالب ومنحه صلاحية استخدام المنصة؟"))return;
   b.disabled=true;
   const {error}=await db.rpc("staff_approve_user",{p_user_id:b.dataset.approveUser});
@@ -143,18 +143,31 @@ async function loadPendingApprovals(){
 }
 
 async function loadAccounts(){
- const t=$("#accountList");if(!t||!isOwner())return;
- const {data,error}=await db.from("profiles").select("id,display_name,role,created_at").order("created_at",{ascending:false}).limit(100);
- if(error){console.error(error);t.textContent="تعذر تحميل الحسابات.";return}
- const accounts=(data||[]).filter(a=>a.id!==sessionUser.id);
- if(!accounts.length){t.innerHTML='<div class="empty-state">لا توجد حسابات أخرى لإدارتها حتى الآن.</div>';return}
- t.innerHTML=accounts.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>'+esc(a.id.slice(0,8))+'… · '+esc(a.role)+'</small></span><select data-account-role="'+a.id+'" aria-label="تغيير صلاحية الحساب">'+["student","teacher","admin"].map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+r+'</option>').join("")+'</select></div>').join("");
- $$("[data-account-role]").forEach(s=>s.addEventListener("change",async()=>{
-  const id=s.dataset.accountRole,role=s.value;s.disabled=true;
-  const {error}=await db.rpc("owner_set_role",{p_user_id:id,p_role:role});
-  if(error){console.error(error);toast(error.message?.includes("duplicate")?"يوجد حساب مدرس بالفعل. ألغِ صلاحيته أولاً.":"تعذر تغيير الصلاحية.");await loadAccounts()}
-  else{toast("تم تحديث صلاحية الحساب.");await loadAccounts()}
-  s.disabled=false;
+ const t=$("#accountList");if(!t||!isOwner()||!dangerUnlocked)return;
+ t.innerHTML='<div class="empty-state">جارٍ تحميل الحسابات...</div>';
+ const {data,error}=await db.functions.invoke("owner-user-admin",{body:{action:"list_accounts"}});
+ if(error||!data?.accounts){console.error(error);t.innerHTML='<div class="empty-state">تعذر تحميل الحسابات. تحقق من اتصالك ثم أعد المحاولة.</div>';return}
+ const accounts=data.accounts;
+ if(!accounts.length){t.innerHTML='<div class="empty-state">لا توجد حسابات مسجلة.</div>';return}
+ t.innerHTML=accounts.map(a=>{
+  const self=a.id===sessionUser.id, owner=a.role==="owner";
+  const roleOptions=(self?["owner"]:["student","teacher","admin"]).map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+({student:"طالب",teacher:"مدرس",admin:"مدير",owner:"مالك المنصة"}[r])+'</option>').join("");
+  return '<article class="owner-account" data-owner-account="'+a.id+'"><div class="owner-account-head"><div><b>'+esc(a.display_name||"حساب")+'</b><small>@'+esc(a.username||"بدون اسم مستخدم")+' · '+dateLabel(a.created_at)+'</small><small class="account-id">'+esc(a.id)+'</small></div><span class="account-role">'+(owner?"OWNER":esc(a.role))+'</span></div><div class="owner-account-fields"><label>اسم المستخدم<input data-field="username" value="'+esc(a.username||"")+'" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" '+(self?"":"")+'></label><label>الاسم الظاهر<input data-field="display_name" value="'+esc(a.display_name||"")+'" maxlength="60"></label><label>الصلاحية<select data-field="role" '+(self?"disabled":"")+'>'+roleOptions+'</select></label><label>حالة الحساب<select data-field="approved" '+(self?"disabled":"")+'><option value="true" '+(a.is_approved?"selected":"")+'>مقبول</option><option value="false" '+(!a.is_approved?"selected":"")+'>في انتظار الموافقة</option></select></label></div><div class="owner-account-actions"><button type="button" class="btn btn-outline btn-small" data-save-account>حفظ بيانات الحساب</button><label class="password-reset-field">كلمة مرور جديدة<input data-field="new_password" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label><button type="button" class="btn btn-primary btn-small" data-reset-password>تعيين كلمة المرور</button></div></article>';
+ }).join("");
+ $("[data-save-account]").forEach(b=>b.addEventListener("click",async()=>{
+  const row=b.closest("[data-owner-account]"),id=row.dataset.ownerAccount;
+  const payload={action:"update_account",user_id:id,username:$('[data-field="username"]',row).value,display_name:$('[data-field="display_name"]',row).value,role:$('[data-field="role"]',row).value,is_approved:$('[data-field="approved"]',row).value==="true"};
+  b.disabled=true;const {data,error}=await db.functions.invoke("owner-user-admin",{body:payload});b.disabled=false;
+  if(error||data?.error){toast(data?.error||"تعذر حفظ الحساب.");return}
+  toast("تم حفظ بيانات الحساب.");await loadAccounts();
+ }));
+ $("[data-reset-password]").forEach(b=>b.addEventListener("click",async()=>{
+  const row=b.closest("[data-owner-account]"),id=row.dataset.ownerAccount,input=$('[data-field="new_password"]',row),password=input.value;
+  if(password.length<8||password.length>72){toast("كلمة المرور يجب أن تكون بين 8 و72 حرفًا.");input.focus();return}
+  if(!window.confirm("سيتم استبدال كلمة مرور هذا الحساب فورًا. هل تريد المتابعة؟"))return;
+  b.disabled=true;const {data,error}=await db.functions.invoke("owner-user-admin",{body:{action:"reset_password",user_id:id,password}});b.disabled=false;
+  if(error||data?.error){toast(data?.error||"تعذر تغيير كلمة المرور.");return}
+  input.value="";toast("تم تعيين كلمة المرور الجديدة.");
  }));
 }
 async function startExam(id){
@@ -182,18 +195,27 @@ async function submitExam(event){
 }
 async function submitAuth(event){
  event.preventDefault();const form=event.currentTarget,b=$(".auth-submit",form),v=new FormData(form);
- const email=String(v.get("email")||"").trim().toLowerCase(),password=String(v.get("password")||"");b.disabled=true;
- setStatus("#authStatus",authMode==="signup"?"جارٍ إنشاء الحساب...":"جارٍ تسجيل الدخول...");
+ const username=String(v.get("username")||"").trim().toLowerCase(),password=String(v.get("password")||"");
+ b.disabled=true;setStatus("#authStatus",authMode==="signup"?"جارٍ إنشاء الحساب...":"جارٍ تسجيل الدخول...");
  try{
+  if(!/^[a-z0-9_]{3,24}$/.test(username))throw new Error("اسم المستخدم يجب أن يكون من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _.");
   if(authMode==="signup"){
    const name=String(v.get("displayName")||"").trim()||"طالب";
-   const {data,error}=await db.auth.signUp({email,password,options:{data:{display_name:name},emailRedirectTo:window.location.origin+window.location.pathname}});
+   if(["admin","administrator","owner","root","support"].includes(username))throw new Error("اسم المستخدم محجوز.");
+   const internalEmail=username+"@accounts.sealx2.invalid";
+   const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,username}}});
    if(error)throw error;
-   if(data.session){$("#authDialog").close();await refreshSession();toast("تم إنشاء الحساب بنجاح.")}
-   else setStatus("#authStatus","تم إنشاء الحساب. فعّل خيار السماح بتسجيل الدخول بالبريد غير المؤكد من إعدادات Supabase، وبعدها يسجّل الطالب ويدخل قائمة انتظار موافقة المدرس.");
+   if(!data.session)throw new Error("تعذر بدء الجلسة. تأكد من إيقاف تأكيد البريد الإلكتروني في إعدادات Supabase ثم أعد المحاولة.");
+   const {error:sessionError}=await db.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
+   if(sessionError)throw sessionError;
+   $("#authDialog").close();await refreshSession();toast("تم إنشاء الحساب. ينتظر الآن موافقة المدرس.");
   }else{
-   const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
-   $("#authDialog").close();await refreshSession();if(profile?.is_approved===false)toast("حسابك في انتظار موافقة المدرس قبل دخول المنصة.");else toast("تم تسجيل الدخول.");
+   const {data,error}=await db.functions.invoke("username-login",{body:{username,password}});
+   if(error)throw new Error(data?.error||"اسم المستخدم أو كلمة المرور غير صحيحة.");
+   if(!data?.access_token||!data?.refresh_token)throw new Error("تعذر إنشاء جلسة الدخول.");
+   const {error:sessionError}=await db.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+   if(sessionError)throw sessionError;
+   $("#authDialog").close();await refreshSession();if(profile?.is_approved===false)toast("حسابك في انتظار موافقة المدرس.");else toast("تم تسجيل الدخول.");
   }
  }catch(e){console.error(e);setStatus("#authStatus",e.message||"تعذر إكمال العملية.",true)}
  finally{b.disabled=false}
