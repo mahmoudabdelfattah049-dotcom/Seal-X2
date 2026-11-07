@@ -82,3 +82,14 @@ dialog.dialog .privacy-note {
 .danger-warning{margin:15px 0;padding:11px 13px;border:1px solid #b65b5b55;border-radius:10px;color:#ffc0c0;background:#9c343414;font-size:11px}
 #dangerContent h4{margin:14px 0 4px}
 @media(max-width:520px){.danger-head{align-items:flex-start;flex-direction:column}.danger-head .btn{width:100%}}
+
+/* Teacher approval queue and pending-account gate */
+.approval-gate{padding-top:28px;padding-bottom:28px}
+.approval-card{max-width:760px;margin:0 auto;padding:28px;border:1px solid #d7a34d66;border-radius:18px;background:linear-gradient(145deg,#292315,#142033);text-align:center}
+.approval-card h2{margin:8px 0 12px}
+.approval-card p{color:var(--muted,#aeb8c8);line-height:1.9}
+.approval-state{display:inline-block;margin-top:12px;padding:8px 13px;border-radius:30px;background:#d7a34d18;color:#e8c477;font-size:12px}
+.approval-queue{margin-bottom:22px}
+.approval-queue h3{margin:0 0 5px}
+.approval-queue .staff-row{gap:12px}
+.approval-queue .staff-row small{overflow-wrap:anywhere}
