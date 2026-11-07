@@ -216,8 +216,8 @@ function bindEvents(){
 }
 document.addEventListener("DOMContentLoaded",async()=>{
  bindEvents();addQuestion();setAuthMode("login");await refreshSession();
- db.auth.onAuthStateChange(async(_event,session)=>{
-  sessionUser=session?.user||null;await loadProfile();updateAuthUI();
-  await Promise.all([loadExams(),loadResources(),loadAnnouncements()]);
+ db.auth.onAuthStateChange((_event,session)=>{
+  sessionUser=session?.user||null;
+  window.setTimeout(async()=>{await loadProfile();updateAuthUI();await Promise.all([loadExams(),loadResources(),loadAnnouncements()]);},0);
  });
 });
