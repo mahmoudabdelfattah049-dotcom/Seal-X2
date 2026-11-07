@@ -127,8 +127,9 @@ async function loadAccounts(){
  const t=$("#accountList");if(!t||!isOwner())return;
  const {data,error}=await db.from("profiles").select("id,display_name,role,created_at").order("created_at",{ascending:false}).limit(100);
  if(error){console.error(error);t.textContent="تعذر تحميل الحسابات.";return}
- if(!data?.length){t.innerHTML='<div class="empty-state">لا توجد حسابات مسجلة بعد.</div>';return}
- t.innerHTML=data.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>'+esc(a.id.slice(0,8))+'… · '+esc(a.role)+'</small></span><select data-account-role="'+a.id+'" aria-label="تغيير صلاحية الحساب">'+["student","teacher","admin"].map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+r+'</option>').join("")+'</select></div>').join("");
+ const accounts=(data||[]).filter(a=>a.id!==sessionUser.id);
+ if(!accounts.length){t.innerHTML='<div class="empty-state">لا توجد حسابات أخرى لإدارتها حتى الآن.</div>';return}
+ t.innerHTML=accounts.map(a=>'<div class="staff-row account-row"><span><b>'+esc(a.display_name||"طالب")+'</b><small>'+esc(a.id.slice(0,8))+'… · '+esc(a.role)+'</small></span><select data-account-role="'+a.id+'" aria-label="تغيير صلاحية الحساب">'+["student","teacher","admin"].map(r=>'<option value="'+r+'" '+(a.role===r?"selected":"")+'>'+r+'</option>').join("")+'</select></div>').join("");
  $$("[data-account-role]").forEach(s=>s.addEventListener("change",async()=>{
   const id=s.dataset.accountRole,role=s.value;s.disabled=true;
   const {error}=await db.rpc("owner_set_role",{p_user_id:id,p_role:role});
