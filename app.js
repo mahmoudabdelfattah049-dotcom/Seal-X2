@@ -127,7 +127,7 @@ async function loadStaffExams(){
  }));
 }
 
-async async function loadPendingApprovals(){
+async function loadPendingApprovals(){
  const t=$("#pendingApprovalList");if(!t||!isStaff())return;
  const {data,error}=await db.from("profiles").select("id,display_name,username,role,created_at,is_approved").eq("is_approved",false).eq("role","student").order("created_at",{ascending:true}).limit(100);
  if(error){console.error(error);t.textContent="تعذر تحميل طلبات الانضمام.";return}
