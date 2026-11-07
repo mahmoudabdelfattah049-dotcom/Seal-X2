@@ -80,14 +80,14 @@ function reportWrongHtml(items){
 }
 async function loadStudentReports(){
  const host=$("#studentReportList");if(!host||!sessionUser)return;
- const {data,error}=await db.from("exam_reports").select("id,exam_title,score,max_score,wrong_questions,student_can_view_score,submitted_at").eq("student_id",sessionUser.id).order("submitted_at",{ascending:false}).limit(100);
+ const {data,error}=await db.rpc("get_my_exam_reports");
  if(error){console.error("Student reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل تقاريرك حاليًا.</div>';return}
  if(!data?.length){host.innerHTML='<div class="empty-state">ستظهر تقاريرك هنا تلقائيًا بعد تسليم أول امتحان.</div>';return}
  host.innerHTML=data.map(r=>'<article class="report-card"><div class="report-card-head"><div><span class="report-kicker">EXAM REPORT</span><h3>'+esc(r.exam_title)+'</h3><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score">'+(r.student_can_view_score?'<b>'+r.score+' / '+r.max_score+'</b>':'<b>محفوظ</b>')+'<small>'+(r.student_can_view_score?'الدرجة':'النتيجة مخفية')+'</small></div></div>'+(r.student_can_view_score?'<details class="report-details"><summary>مراجعة الإجابات الخاطئة ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details>':'<p class="hint">تم حفظ التقرير. تفاصيل التصحيح تخضع لإعدادات المدرس.</p>')+'</article>').join("");
 }
 async function loadTeacherReports(){
  const host=$("#teacherReportList");if(!host||sessionUser?.id!=="5d0f01fe-d999-42e8-bb49-0b87a308e138")return;
- const {data,error}=await db.from("exam_reports").select("id,student_name,exam_title,score,max_score,wrong_questions,submitted_at").eq("teacher_id",sessionUser.id).order("submitted_at",{ascending:false}).limit(250);
+ const {data,error}=await db.rpc("get_teacher_exam_reports");
  if(error){console.error("Teacher reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل التقارير. تحقق من صلاحيات قاعدة البيانات.</div>';return}
  if(!data?.length){host.innerHTML='<div class="empty-state">لا توجد تقارير بعد. ستصل تقارير الطلاب هنا تلقائيًا فور تسليم الامتحانات.</div>';return}
  host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
