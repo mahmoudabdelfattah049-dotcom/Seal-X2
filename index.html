@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261107-exam-right-edge-2">
+  <link rel="stylesheet" href="style.css?v=20261107-library-pdf-1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app.js?v=20261107-four-name-policy-1"></script>
+  <script defer src="app.js?v=20261107-library-pdf-1"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
@@ -33,7 +33,19 @@
     <section id="approvalGate" class="section wrap approval-gate" hidden><div class="approval-card"><span class="kicker">ACCOUNT REVIEW</span><h2>حسابك في انتظار موافقة المدرس</h2><p>تم تسجيل حسابك. بمجرد موافقة المدرس، ستُفتح لك المنصة بكل صلاحيات الطالب.</p><span class="approval-state">● طلب الانضمام قيد المراجعة</span></div></section>
     <section id="metrics" class="metrics wrap"><div><b>01</b><span>العلوم المتكاملة</span></div><div><b>02</b><span>اختبارات اختيار من متعدد</span></div><div><b>03</b><span>نتائج ومحاولات محفوظة</span></div><div><b>04</b><span>إشراف مستر محمد عمارة</span></div></section>
     <section id="exams" class="section wrap"><div class="section-head"><div><span class="kicker">ASSESSMENT CENTER</span><h2>الامتحانات <i>الإلكترونية</i></h2><p>امتحانات اختيار من متعدد، اختيارات واضحة، وتصحيح تلقائي مع حفظ النتيجة في حسابك.</p></div><span class="section-index">01 / EXAMS</span></div><div id="examGrid" class="cards-grid"><div class="loading-card">جاري تحميل الامتحانات...</div></div></section>
-    <section id="library" class="section wrap"><div class="section-head"><div><span class="kicker">LEARNING LIBRARY</span><h2>المكتبة <i>التعليمية</i></h2><p>مصادر وروابط يضيفها المدرس لتسهيل المذاكرة والمراجعة.</p></div><span class="section-index">02 / LIBRARY</span></div><div id="resourceGrid" class="cards-grid"><div class="loading-card">جاري تحميل المصادر...</div></div></section>
+    <section id="library" class="section wrap"><div class="section-head"><div><span class="kicker">LEARNING LIBRARY</span><h2>المكتبة <i>التعليمية</i></h2><p>مصادر وروابط يضيفها المدرس لتسهيل المذاكرة والمراجعة.</p></div><span class="section-index">02 / LIBRARY</span></div><div class="library-subsection">
+      <div class="library-subhead"><div><span class="kicker">MINISTRY WEEKLY ASSESSMENTS</span><h3>التقييمات الأسبوعية الرسمية</h3><p class="hint">العلوم المتكاملة · الصف الأول الثانوي · اللغة العربية · 2026/2027</p></div><span class="builder-chip">OFFICIAL PDFs</span></div>
+      <div id="ministryEvaluationGrid" class="cards-grid"></div>
+    </div>
+    <div class="library-subsection">
+      <div class="library-subhead"><div><span class="kicker">TEACHER MATERIALS</span><h3>ملفات مستر محمد عمارة</h3><p class="hint">ملفات PDF التي يرفعها المستر ستظهر هنا للطلاب تلقائيًا.</p></div><span class="builder-chip">TEACHER PDFs</span></div>
+      <div id="teacherPdfGrid" class="cards-grid"><div class="loading-card">جاري تحميل ملفات المستر...</div></div>
+    </div>
+    <div class="library-subsection">
+      <div class="library-subhead"><div><span class="kicker">MORE RESOURCES</span><h3>مصادر وروابط إضافية</h3></div></div>
+      <div id="resourceGrid" class="cards-grid"><div class="loading-card">جاري تحميل المصادر...</div></div>
+    </div>
+    <p class="ministry-library-link"><a href="https://ellibrary.moe.gov.eg/Performance_Assessments" target="_blank" rel="noopener noreferrer">فتح المكتبة الإلكترونية الرسمية للوزارة ↗</a></p></section>
     <section id="announcements" class="section wrap"><div class="section-head"><div><span class="kicker">LATEST UPDATES</span><h2>آخر <i>الإعلانات</i></h2><p>تابع التعليمات والمواعيد والتحديثات المنشورة.</p></div><span class="section-index">03 / UPDATES</span></div><div id="announcementList" class="announcement-list"><div class="loading-card">جاري تحميل الإعلانات...</div></div></section>
     <section id="dashboard" class="section wrap" hidden><div class="section-head"><div><span class="kicker">MY LEARNING</span><h2>لوحة <i>إنجازي</i></h2><p>محاولاتك ونتائجك السابقة.</p></div><span class="section-index">04 / DASHBOARD</span></div><div id="attemptList" class="attempt-list"></div><div class="reports-section"><div class="reports-heading"><span class="kicker">MY PRIVATE REPORTS</span><h3>تقاريري التفصيلية</h3><p class="hint">تقارير محفوظة لكل محاولة، مع مراجعة الإجابات الخاطئة عندما يسمح إعداد الامتحان.</p></div><div id="studentReportList" class="report-list"><div class="empty-state">جاري تحميل تقاريرك...</div></div></div></section>
     <section id="teacherPanel" class="section wrap" hidden><div class="section-head"><div><span class="kicker">TEACHER WORKSPACE</span><h2>مساحة <i>المدرس</i></h2><p>إدارة الامتحانات والمصادر والإعلانات.</p></div><span class="section-index" id="roleLabel">STAFF WORKSPACE</span></div>
@@ -43,6 +55,7 @@
         <div class="panel-stack"><div class="panel"><h3>إدارة الامتحانات</h3><p class="hint">تابع حالة النشر والامتحانات التي أنشأتها.</p><div id="staffExamList" class="staff-list"></div></div>
           <form id="announcementForm" class="panel form-panel"><h3>نشر إعلان</h3><label>العنوان<input name="title" required maxlength="140"></label><label>التفاصيل<textarea name="body" rows="3" required maxlength="2500"></textarea></label><button class="btn btn-primary">نشر الإعلان</button><p class="form-status" id="announcementStatus"></p></form>
           <form id="resourceForm" class="panel form-panel"><h3>إضافة مصدر تعليمي</h3><label>اسم المصدر<input name="title" required maxlength="140"></label><label>وصف<textarea name="description" rows="2" maxlength="500"></textarea></label><label>الرابط<input name="url" type="url" required placeholder="https://..."></label><button class="btn btn-primary">إضافة للمكتبة</button><p class="form-status" id="resourceStatus"></p></form>
+          <form id="pdfUploadForm" class="panel form-panel"><h3>رفع ملف PDF للمكتبة</h3><p class="hint">ارفع مذكرة أو مراجعة بصيغة PDF ليتم عرضها للطلاب في قسم ملفات المستر.</p><label>اسم الملف<input name="title" required maxlength="140" placeholder="مثال: مراجعة الوحدة الأولى"></label><label>وصف مختصر<textarea name="description" rows="2" maxlength="500" placeholder="محتوى الملف أو تعليمات للطلاب"></textarea></label><label>اختيار ملف PDF<input name="pdfFile" type="file" accept="application/pdf,.pdf" required></label><small class="hint">PDF فقط · الحد الأقصى 20 ميجابايت</small><button class="btn btn-primary" type="submit">رفع ونشر الملف</button><p class="form-status" id="pdfUploadStatus"></p></form>
         </div>
       </div>
     </section>
