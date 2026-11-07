@@ -22,3 +22,53 @@
 .empty-state{padding:14px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:12px}
 .form-status.error{color:#ff9c9c}
 @media(max-width:520px){.question-card .options-grid{grid-template-columns:1fr}.staff-row{align-items:flex-start}.account-row{flex-wrap:wrap}}
+
+
+/* Login and signup dialog: keep the complete form centered on every viewport. */
+dialog.dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(460px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
+  max-height: calc(100vh - 28px);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  transform: none;
+  direction: rtl;
+}
+dialog.dialog .dialog-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 28px clamp(17px, 5vw, 30px);
+  box-sizing: border-box;
+}
+dialog.dialog .dialog-card label,
+dialog.dialog .dialog-card input {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+dialog.dialog .dialog-card input {
+  text-align: right;
+}
+dialog.dialog .privacy-note {
+  display: block;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  dialog.dialog {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+  dialog.dialog .dialog-card {
+    padding: 25px 18px 20px;
+  }
+}
