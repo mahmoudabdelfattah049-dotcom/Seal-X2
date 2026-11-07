@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Seal X2 — مساحة تعليمية للعلوم والامتحانات الإلكترونية.">
+  <title>Seal X2 | بوابة العلوم</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <header class="topbar">
+    <a class="brand" href="#home"><span class="brand-mark">S<span>X</span></span><span><b>SEAL X2</b><small>SCIENCE PORTAL</small></span></a>
+    <nav><a href="#exams">الامتحانات</a><a href="#library">المكتبة</a><a href="#announcements">الإعلانات</a></nav>
+    <div class="top-actions"><span id="userBadge" class="user-badge" hidden></span><button id="authOpen" class="btn btn-outline">تسجيل الدخول</button><button id="logoutBtn" class="btn btn-outline" hidden>خروج</button><button id="menuBtn" class="menu-btn" aria-label="القائمة">☰</button></div>
+  </header>
+  <main id="home">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <div class="eyebrow"><i></i> LEARN · PRACTICE · ACHIEVE</div>
+        <h1>افهم العلوم،<br><span>واختبر مستواك.</span></h1>
+        <p>مساحة تعليمية تجمع الشرح والمصادر والامتحانات الإلكترونية في تجربة واحدة واضحة ومنظمة.</p>
+        <div class="hero-buttons"><a class="btn btn-primary" href="#exams">استكشف الامتحانات <b>↙</b></a><a class="btn btn-ghost" href="#library">المكتبة التعليمية</a></div>
+        <div class="hero-proof"><span>✦</span><div><b>تعلم بخطوات ثابتة</b><small>محتوى منظم ونتائج محفوظة على حسابك</small></div></div>
+      </div>
+      <div class="hero-art" aria-label="تصميم علمي"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="science-core"><div class="atom">⚛</div><span>SCIENCE</span><b>SEAL <em>X2</em></b><small>YOUR LEARNING SPACE</small></div><div class="float-card fc-one"><span>01</span><b>Learn</b><small>ابدأ بالفهم</small></div><div class="float-card fc-two"><span>02</span><b>Practice</b><small>اختبر معلوماتك</small></div></div>
+    </section>
+    <section class="metrics wrap"><div><b>01</b><span>مكتبة تعليمية</span></div><div><b>02</b><span>امتحانات إلكترونية</span></div><div><b>03</b><span>متابعة النتائج</span></div><div><b>∞</b><span>فرص للتعلم</span></div></section>
+    <section id="exams" class="section wrap"><div class="section-head"><div><span class="kicker">ASSESSMENT CENTER</span><h2>الامتحانات <i>الإلكترونية</i></h2><p>اختر امتحاناً متاحاً وابدأ المحاولة. نتيجتك تُحفظ في حسابك.</p></div><span class="section-index">01 / EXAMS</span></div><div id="examGrid" class="cards-grid"><div class="loading-card">جاري تحميل الامتحانات...</div></div></section>
+    <section id="library" class="section wrap"><div class="section-head"><div><span class="kicker">LEARNING LIBRARY</span><h2>المكتبة <i>التعليمية</i></h2><p>مصادر وروابط يضيفها المدرس لتسهيل المذاكرة والمراجعة.</p></div><span class="section-index">02 / LIBRARY</span></div><div id="resourceGrid" class="cards-grid"><div class="loading-card">جاري تحميل المصادر...</div></div></section>
+    <section id="announcements" class="section wrap"><div class="section-head"><div><span class="kicker">LATEST UPDATES</span><h2>آخر <i>الإعلانات</i></h2><p>تابع التعليمات والمواعيد والتحديثات المنشورة.</p></div><span class="section-index">03 / UPDATES</span></div><div id="announcementList" class="announcement-list"><div class="loading-card">جاري تحميل الإعلانات...</div></div></section>
+    <section id="dashboard" class="section wrap" hidden><div class="section-head"><div><span class="kicker">MY LEARNING</span><h2>لوحة <i>إنجازي</i></h2><p>محاولاتك ونتائجك السابقة.</p></div><span class="section-index">04 / DASHBOARD</span></div><div id="attemptList" class="attempt-list"></div></section>
+    <section id="teacherPanel" class="section wrap" hidden><div class="section-head"><div><span class="kicker">TEACHER WORKSPACE</span><h2>مساحة <i>المدرس</i></h2><p>إدارة الامتحانات والمصادر والإعلانات.</p></div><span class="section-index">STAFF ONLY</span></div>
+      <div class="teacher-grid">
+        <form id="examForm" class="panel form-panel"><h3>إنشاء امتحان</h3><label>عنوان الامتحان<input name="title" required maxlength="140" placeholder="مثال: مراجعة الوحدة الأولى"></label><label>المادة<select name="subject" id="subjectSelect" required></select></label><label>وصف مختصر<textarea name="description" rows="2" maxlength="500"></textarea></label><label>المدة بالدقائق<input name="duration" type="number" min="5" max="180" value="30" required></label><div class="field-divider"></div><h4>أسئلة الامتحان</h4><p class="hint">كل سؤال في سطر مستقل، والاختيارات مفصولة بعلامة | ثم رقم الإجابة الصحيحة (يبدأ من 1).</p><textarea name="questions" rows="8" required placeholder="ما وحدة قياس القوة؟ | نيوتن | جول | وات | باسكال | 1&#10;أي مما يلي مصدر للطاقة؟ | الشمس | الرمل | الزجاج | البلاستيك | 1"></textarea><label class="check-label"><input name="published" type="checkbox"> نشر الامتحان فوراً</label><button class="btn btn-primary" type="submit">حفظ الامتحان</button><p class="form-status" id="examStatus"></p></form>
+        <div class="panel-stack">
+          <form id="announcementForm" class="panel form-panel"><h3>نشر إعلان</h3><label>العنوان<input name="title" required maxlength="140"></label><label>التفاصيل<textarea name="body" rows="3" required maxlength="2500"></textarea></label><button class="btn btn-primary">نشر الإعلان</button><p class="form-status" id="announcementStatus"></p></form>
+          <form id="resourceForm" class="panel form-panel"><h3>إضافة مصدر تعليمي</h3><label>اسم المصدر<input name="title" required maxlength="140"></label><label>وصف<textarea name="description" rows="2" maxlength="500"></textarea></label><label>الرابط<input name="url" type="url" required placeholder="https://..."></label><button class="btn btn-primary">إضافة للمكتبة</button><p class="form-status" id="resourceStatus"></p></form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer><a class="brand footer-brand" href="#home"><span class="brand-mark">S<span>X</span></span><span><b>SEAL X2</b><small>SCIENCE PORTAL</small></span></a><p>© <span id="year"></span> Seal X2 · مساحة تعليمية للعلوم</p><span>Built for better learning.</span></footer>
+  <dialog id="authDialog" class="dialog"><form id="authForm" class="dialog-card"><button type="button" class="dialog-close" id="authClose" aria-label="إغلاق">×</button><span class="kicker">YOUR ACCOUNT</span><h2 id="authTitle">أهلاً بك</h2><p id="authDescription">سجّل الدخول لمتابعة الامتحانات ونتائجك.</p><div class="auth-tabs"><button type="button" data-mode="login" class="active">دخول</button><button type="button" data-mode="signup">حساب جديد</button></div><label id="displayNameWrap" hidden>الاسم الظاهر<input name="displayName" maxlength="60" placeholder="اسمك"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required placeholder="name@example.com"></label><label>كلمة المرور<input name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="8 أحرف على الأقل"></label><button class="btn btn-primary auth-submit">متابعة</button><p id="authStatus" class="form-status"></p><small class="privacy-note">بيانات الدخول تُدار بواسطة Supabase Auth. لا تشارك كلمة مرورك مع أي شخص.</small></form></dialog>
+  <dialog id="examDialog" class="dialog exam-dialog"><form id="takeExamForm" class="dialog-card"><button type="button" class="dialog-close" id="examClose">×</button><span class="kicker">EXAM SESSION</span><h2 id="takeExamTitle">الامتحان</h2><p id="takeExamMeta"></p><div id="questionArea"></div><button class="btn btn-primary auth-submit" type="submit">تسليم الإجابات وحساب النتيجة</button><p id="takeExamStatus" class="form-status"></p></form></dialog>
+  <div id="toast" class="toast" role="status"></div>
+</body></html>
