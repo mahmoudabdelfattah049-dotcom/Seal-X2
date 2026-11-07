@@ -118,3 +118,31 @@ dialog.dialog .privacy-note {
 .import-preview{display:grid;gap:5px;margin-top:12px;padding:12px;border:1px solid #65d8d044;border-radius:10px;color:var(--text);font-size:11px}
 .import-preview b{color:var(--cyan)}
 .import-preview span,.import-preview small{color:var(--muted)}
+
+/* Private, persistent exam reports */
+.reports-section{margin-top:24px}
+.reports-heading{margin-bottom:14px}
+.reports-heading h3{margin:5px 0}
+.report-list{display:grid;gap:13px}
+.report-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:linear-gradient(145deg,rgba(40,180,170,.07),rgba(255,255,255,.018));min-width:0}
+.report-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.report-card-head>div:first-child{min-width:0}
+.report-card-head h3{margin:4px 0;font-size:16px;overflow-wrap:anywhere}
+.report-card-head p{margin:3px 0;color:var(--muted)}
+.report-card-head small{color:var(--muted);font-size:11px}
+.report-kicker{font-size:9px;letter-spacing:.12em;color:var(--cyan);font-weight:800}
+.report-score{flex:0 0 auto;min-width:76px;text-align:center;padding:10px;border:1px solid #53c8b744;border-radius:12px;background:#53c8b711}
+.report-score b{display:block;font-size:17px;color:var(--cyan)}
+.report-score small{display:block;margin-top:3px}
+.report-details{margin-top:14px;border-top:1px solid var(--line);padding-top:11px}
+.report-details summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--cyan)}
+.report-wrong-list{display:grid;gap:10px;margin-top:12px}
+.report-wrong{padding:12px;border-radius:12px;background:rgba(0,0,0,.12);border:1px solid var(--line)}
+.report-wrong>p{margin:6px 0 10px;line-height:1.8;font-size:13px}
+.report-answer{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:8px;margin-top:6px;font-size:12px}
+.report-answer small{color:var(--muted)}
+.bad-answer{background:#d95b5b12;color:#f09a9a}
+.good-answer{background:#45b98a12;color:#79d8ad}
+.report-points{display:block;margin-top:7px;color:var(--muted)}
+.report-perfect{padding:12px;color:#79d8ad;background:#45b98a12;border-radius:10px;margin-top:10px}
+@media(max-width:520px){.report-card-head{flex-direction:column}.report-score{align-self:stretch;display:flex;justify-content:space-between;align-items:center}.report-answer{flex-direction:column;gap:3px}}
