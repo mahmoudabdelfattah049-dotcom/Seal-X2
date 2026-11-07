@@ -72,3 +72,13 @@ dialog.dialog .privacy-note {
     padding: 25px 18px 20px;
   }
 }
+
+/* Locked emergency administration area */
+.danger-panel{border-color:#a34c4c66;background:linear-gradient(145deg,#241a24,#101b2a)}
+.danger-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.danger-head h3{margin:3px 0;font-size:18px}
+.danger-kicker{color:#ff9b9b}
+.danger-head .btn{border-color:#b65b5b88;color:#ffc0c0;white-space:nowrap}
+.danger-warning{margin:15px 0;padding:11px 13px;border:1px solid #b65b5b55;border-radius:10px;color:#ffc0c0;background:#9c343414;font-size:11px}
+#dangerContent h4{margin:14px 0 4px}
+@media(max-width:520px){.danger-head{align-items:flex-start;flex-direction:column}.danger-head .btn{width:100%}}
