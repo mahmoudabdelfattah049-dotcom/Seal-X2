@@ -1,9 +1,0 @@
-/home/runner/work/Seal-X2/Seal-X2/app.js:130
-async async function loadPendingApprovals(){
-      ^^^^^
-
-SyntaxError: Unexpected token 'async'
-    at wrapSafe (node:internal/modules/cjs/loader:1861:18)
-    at checkSyntax (node:internal/main/check_syntax:88:3)
-
-Node.js v24.22.2
