@@ -93,3 +93,18 @@ dialog.dialog .privacy-note {
 .approval-queue h3{margin:0 0 5px}
 .approval-queue .staff-row{gap:12px}
 .approval-queue .staff-row small{overflow-wrap:anywhere}
+
+/* Owner account management */
+.owner-account-list{display:grid;gap:14px}
+.owner-account{border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(255,255,255,.025);display:grid;gap:13px}
+.owner-account-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.owner-account-head>div{display:grid;gap:4px;min-width:0}
+.owner-account-head small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.owner-account-head .account-id{font-size:10px;opacity:.65}
+.account-role{font-size:11px;letter-spacing:.08em;color:var(--cyan);font-weight:800}
+.owner-account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.owner-account-fields label,.password-reset-field{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.owner-account-fields input,.owner-account-fields select,.password-reset-field input{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2);color:var(--text);font:inherit}
+.owner-account-actions{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.password-reset-field{flex:1;min-width:180px}
+@media(max-width:560px){.owner-account-fields{grid-template-columns:1fr}.owner-account-actions{align-items:stretch}.owner-account-actions>button{width:100%}}
