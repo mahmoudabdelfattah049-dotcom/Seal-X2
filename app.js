@@ -109,6 +109,10 @@ async function loadTeacherReports(){
  host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
 }
 const reportArchiveCache=new Map();
+async function copyReportText(text){
+ if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return;}
+ const area=document.createElement("textarea");area.value=text;area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();const copied=document.execCommand("copy");area.remove();if(!copied)throw new Error("Clipboard unavailable");
+}
 function reportPlainText(r){
  const wrong=Array.isArray(r.wrong_questions)?r.wrong_questions:[];
  return [
@@ -436,7 +440,7 @@ function bindEvents(){
  $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#reportArchiveList").addEventListener("click",async e=>{
   const copy=e.target.closest("[data-copy-archive-report]");
-  if(copy){const report=reportArchiveCache.get(copy.dataset.copyArchiveReport);if(!report)return;try{await navigator.clipboard.writeText(reportPlainText(report));toast("تم نسخ تقرير الطالب.");}catch(err){console.error(err);toast("تعذر النسخ؛ افتح التقرير وحاول مرة أخرى.");}return;}
+  if(copy){const report=reportArchiveCache.get(copy.dataset.copyArchiveReport);if(!report)return;try{await copyReportText(reportPlainText(report));toast("تم نسخ تقرير الطالب.");}catch(err){console.error(err);toast("تعذر النسخ؛ افتح التقرير وحاول مرة أخرى.");}return;}
   const download=e.target.closest("[data-download-archive]");
   if(download){const archive=reportArchiveCache.get(download.dataset.downloadArchive);if(!archive)return;const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=download.dataset.downloadArchive.split("/").pop();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
  });
