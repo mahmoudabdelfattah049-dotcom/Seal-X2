@@ -79,6 +79,68 @@ async function loadSubjects(){
  const rows=(data||[]).filter(x=>x.name==="العلوم المتكاملة");
  s.innerHTML=rows.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join("")||'<option value="">مادة العلوم المتكاملة غير موجودة</option>';
 }
+function parseJsLiteral(source,start){
+ let i=start;
+ const skip=()=>{while(i<source.length){if(/\s/.test(source[i])){i++;continue}if(source.slice(i,i+2)==="//"){i=source.indexOf("\n",i+2);if(i<0)i=source.length;continue}if(source.slice(i,i+2)==="/*"){const end=source.indexOf("*/",i+2);if(end<0)throw new Error("تعليق JavaScript غير مكتمل.");i=end+2;continue}break}};
+ const string=()=>{const quote=source[i++];let out="";while(i<source.length){let c=source[i++];if(c===quote)return out;if(c==="\\"){if(i>=source.length)break;const e=source[i++];const map={n:"\n",r:"\r",t:"\t",b:"\b",f:"\f",v:"\v","0":"\0"};if(e==="u"){const h=source.slice(i,i+4);if(!/^[0-9a-f]{4}$/i.test(h))throw new Error("ترميز Unicode غير صحيح داخل نص.");out+=String.fromCharCode(parseInt(h,16));i+=4}else if(e==="x"){const h=source.slice(i,i+2);if(!/^[0-9a-f]{2}$/i.test(h))throw new Error("ترميز نص غير صحيح.");out+=String.fromCharCode(parseInt(h,16));i+=2}else if(e==="\n"){}else out+=map[e]??e}else out+=c}throw new Error("هناك نص غير مغلق بعلامة اقتباس.")};
+ const value=()=>{
+  skip();const c=source[i];
+  if(c==="'"||c==='"')return string();
+  if(c==="["){i++;const a=[];skip();if(source[i]==="]"){i++;return a}while(i<source.length){a.push(value());skip();if(source[i]==="]"){i++;return a}if(source[i]!==",")throw new Error("تنسيق عناصر مصفوفة الأسئلة غير صحيح.");i++;skip();if(source[i]==="]"){i++;return a}}throw new Error("مصفوفة الأسئلة غير مكتملة.")}
+  if(c==="{"){i++;const o={};skip();if(source[i]==="}"){i++;return o}while(i<source.length){skip();let k;if(source[i]==="'"||source[i]==='"')k=string();else{const m=source.slice(i).match(/^[A-Za-z_$][\w$]*/);if(!m)throw new Error("اسم خاصية غير صحيح في كائن السؤال.");k=m[0];i+=k.length}skip();if(source[i++]!==":")throw new Error("علامة النقطتين مفقودة بعد "+k+".");o[k]=value();skip();if(source[i]==="}"){i++;return o}if(source[i]!==",")throw new Error("تنسيق خصائص السؤال غير صحيح.");i++;skip();if(source[i]==="}"){i++;return o}}throw new Error("كائن السؤال غير مكتمل.")}
+  const num=source.slice(i).match(/^-?\d+(?:\.\d+)?/);if(num){i+=num[0].length;return Number(num[0])}
+  const id=source.slice(i).match(/^[A-Za-z_$][\w$]*/);if(id){i+=id[0].length;if(id[0]==="true")return true;if(id[0]==="false")return false;if(id[0]==="null")return null;throw new Error("قيمة JavaScript غير مدعومة: "+id[0])}
+  throw new Error("تعذر فهم بيانات الأسئلة قرب الموضع "+i+".");
+ };
+ const result=value();return result;
+}
+function readExamSource(source){
+ if(!source.trim())throw new Error("الصق كود ملف الامتحان أولاً.");
+ const doc=new DOMParser().parseFromString(source,"text/html");
+ const scripts=[...doc.querySelectorAll("script")].map(s=>s.textContent||"");
+ const jsSource=scripts.join("\n")||source;
+ const match=jsSource.match(/\b(?:const|let|var)\s+questions\s*=\s*/);
+ if(!match)throw new Error("لم أجد مصفوفة questions داخل الكود. يجب أن تكون بصيغة const questions = [ ... ].");
+ const questions=parseJsLiteral(jsSource,match.index+match[0].length);
+ if(!Array.isArray(questions)||!questions.length)throw new Error("مصفوفة الأسئلة فارغة أو ليست مصفوفة صحيحة.");
+ if(questions.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال في الامتحان الواحد.");
+ const normalized=questions.map((q,i)=>{
+  if(!q||typeof q!=="object"||Array.isArray(q))throw new Error("السؤال رقم "+(i+1)+" ليس كائن سؤال صحيحًا.");
+  const prompt=String(q.q??q.prompt??"").trim(),options=q.opts??q.options,correct=Number(q.ans??q.correct_option);
+  if(!prompt)throw new Error("نص السؤال رقم "+(i+1)+" غير موجود.");
+  if(!Array.isArray(options)||options.length<2||options.length>6||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("اختيارات السؤال رقم "+(i+1)+" يجب أن تكون من 2 إلى 6 اختيارات نصية غير فارغة.");
+  if(!Number.isInteger(correct)||correct<0||correct>=options.length)throw new Error("رقم الإجابة الصحيحة في السؤال رقم "+(i+1)+" غير صحيح. استخدم ترقيمًا يبدأ من صفر.");
+  return {prompt,options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1)};
+ });
+ if(normalized.some(q=>!Number.isInteger(q.points)||q.points<1||q.points>100))throw new Error("درجة كل سؤال يجب أن تكون عددًا صحيحًا من 1 إلى 100.");
+ const title=(doc.querySelector("title")?.textContent||"").trim();
+ const lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim();
+ const timeMatch=jsSource.match(/\btimeLeft\s*=\s*(\d+)\s*;/);
+ const duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
+ return {title,description:lesson,duration:duration&&duration>=5&&duration<=180?duration:null,questions:normalized};
+}
+function importExamCode(){
+ const status=$("#importStatus"),preview=$("#importPreview");
+ try{
+  const parsed=readExamSource($("#examSourceCode").value);
+  if(parsed.title)$("#examForm [name=title]").value=parsed.title.slice(0,140);
+  if(parsed.description)$("#examForm [name=description]").value=parsed.description.slice(0,500);
+  if(parsed.duration)$("#examForm [name=duration]").value=parsed.duration;
+  const subject=$("#subjectSelect");if(subject.options.length&&![...subject.options].some(o=>o.selected))subject.selectedIndex=0;
+  $("#questionBuilder").innerHTML="";
+  parsed.questions.forEach((q,i)=>{
+   addQuestion();const card=$(".question-card",$("#questionBuilder"))[i];
+   $(".question-prompt",card).value=q.prompt;
+   $(".question-option",card).forEach((input,j)=>{if(j<q.options.length)input.value=q.options[j];else input.closest("label").hidden=true});
+   $(".question-correct",card).innerHTML=q.options.map((_,j)=>'<option value="'+j+'">الاختيار '+(j+1)+'</option>').join("");
+   $(".question-correct",card).value=String(q.correct_option);
+   $(".question-points",card).value=String(q.points);
+  });
+  preview.hidden=false;preview.innerHTML='<b>تمت قراءة '+parsed.questions.length+' سؤالًا بنجاح.</b><span>العنوان: '+esc(parsed.title||"لم يُستخرج — اكتب العنوان يدويًا")+'</span><span>المدة: '+(parsed.duration?parsed.duration+" دقيقة":"لم تُستخرج — راجعها يدويًا")+'</span><span>الإجابة الصحيحة: تم نقلها من ans / correct_option لكل سؤال.</span><small>راجع المعاينة والأسئلة والإجابات قبل الحفظ أو النشر.</small>';
+  setStatus("#importStatus","تم تحليل الكود وملء منشئ الامتحان. لم يتم حفظ أو نشر الامتحان بعد.");
+  toast("تم استيراد الأسئلة إلى المنشئ.");
+ }catch(e){preview.hidden=true;setStatus("#importStatus",e.message||"تعذر قراءة الكود.",true)}
+}
 function addQuestion(){
  const host=$("#questionBuilder"),n=host.querySelectorAll(".question-card").length+1,card=document.createElement("section");
  card.className="question-card";
@@ -261,6 +323,7 @@ function bindEvents(){
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
  $("#resourceForm").addEventListener("submit",submitResource);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#addQuestionBtn").addEventListener("click",addQuestion);
+ $("#parseExamCodeBtn").addEventListener("click",importExamCode);$("#clearExamCodeBtn").addEventListener("click",()=>{$("#examSourceCode").value="";$("#importPreview").hidden=true;setStatus("#importStatus","");});
  $("#dangerUnlockBtn").addEventListener("click",()=>{if(!isOwner())return toast("هذه المنطقة لمالك المنصة فقط.");if(!dangerUnlocked){if(!window.confirm("تنبيه: أنت على وشك فتح منطقة الإدارة الحساسة. هل تريد المتابعة؟"))return;dangerUnlocked=true;$("#dangerContent").hidden=false;$("#dangerUnlockBtn").textContent="قفل أدوات الطوارئ";loadAccounts();}else{dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}});
  $("#questionBuilder").addEventListener("click",e=>{const b=e.target.closest("[data-remove-question]");if(b){b.closest(".question-card").remove();renumberQuestions()}});
  $("#menuBtn").addEventListener("click",()=>$("#mainNav").classList.toggle("open"));
