@@ -311,3 +311,20 @@ dialog.dialog .privacy-note {
 .ministry-library-link a{text-decoration:underline;text-underline-offset:4px}
 #pdfUploadForm input[type=file]{padding:10px;border:1px dashed #65d8d066;background:#071522;border-radius:10px;color:var(--muted)}
 @media(max-width:520px){.library-subhead{align-items:flex-start;flex-direction:column}.library-subhead .builder-chip{align-self:flex-start}}
+
+/* Rolling two-day private report archive */
+.report-archive-section{margin-top:24px;padding-top:22px;border-top:1px solid var(--line,rgba(255,255,255,.1))}
+.report-archive-list{display:grid;gap:16px}
+.report-archive-file{padding:16px;border:1px solid rgba(101,216,208,.22);border-radius:16px;background:rgba(7,21,34,.55);min-width:0}
+.report-archive-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.report-archive-head h4{margin:5px 0;font-size:18px}
+.report-archive-head small{color:var(--muted)}
+.report-archive-meta{display:grid;justify-items:center;min-width:58px;padding:8px;border-radius:12px;background:rgba(101,216,208,.09)}
+.report-archive-meta b{font-size:22px}
+.report-archive-meta small{font-size:11px;color:var(--muted)}
+.report-archive-stats{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.035);font-size:13px;color:var(--muted)}
+.report-archive-stats b{color:var(--text,#fff)}
+.report-archive-students{display:grid;gap:12px}
+.report-archive-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.report-archive-actions button{font-size:13px}
+@media(max-width:520px){.report-archive-file{padding:12px}.report-archive-head{align-items:flex-start}.report-archive-stats{gap:8px;flex-direction:column}}
