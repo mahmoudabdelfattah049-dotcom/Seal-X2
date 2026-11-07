@@ -21,7 +21,7 @@ function setAuthMode(mode){
 }
 async function loadProfile(){
  profile=null;if(!sessionUser)return;
- const {data,error}=await db.from("profiles").select("display_name,role,is_approved,username").eq("id",sessionUser.id).maybeSingle();
+ const {data,error}=await db.from("profiles").select("display_name,full_name,role,is_approved,username").eq("id",sessionUser.id).maybeSingle();
  if(error){console.error("Profile:",error);return} profile=data;
 }
 function updateAuthUI(){
@@ -33,8 +33,8 @@ function updateAuthUI(){
  $("#userBadge").textContent=profile?.display_name||profile?.username||"حساب المستخدم";
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
- if(logged&&!pending)loadAttempts();
- if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals()}
+ if(logged&&!pending){loadAttempts();loadStudentReports();}
+ if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();}
  if(isOwner()&&!pending)loadAccounts();
  $("#roleLabel").textContent=isOwner()?"OWNER CONTROL":profile?.role==="admin"?"ADMIN WORKSPACE":profile?.role==="teacher"?"TEACHER WORKSPACE":"STAFF";
 }
@@ -72,6 +72,25 @@ async function loadAttempts(){
  const t=$("#attemptList"),{data,error}=await db.rpc("get_my_attempts");
  if(error){console.error(error);t.textContent="تعذر تحميل النتائج.";return}
  t.innerHTML=data?.length?data.map(a=>'<div class="attempt-item"><span>'+esc(a.exam_title||"امتحان")+'<br><small>'+dateLabel(a.submitted_at)+'</small></span><b>'+(a.score===null?"تم التسليم":a.score+" / "+a.max_score)+'</b></div>').join(""):'<div class="loading-card">ستظهر نتائجك هنا بعد حل أول امتحان.</div>';
+}
+function reportDate(v){return new Date(v).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})}
+function reportWrongHtml(items){
+ if(!Array.isArray(items)||!items.length)return '<p class="report-perfect">ممتاز! لم توجد إجابات خاطئة في هذه المحاولة.</p>';
+ return '<div class="report-wrong-list">'+items.map((q,i)=>'<article class="report-wrong"><b>السؤال '+(i+1)+'</b><p>'+esc(q.prompt)+'</p><div class="report-answer bad-answer"><small>إجابتك</small><strong>'+esc(q.selected_option||"لم تتم الإجابة")+'</strong></div><div class="report-answer good-answer"><small>الإجابة الصحيحة</small><strong>'+esc(q.correct_option||"")+'</strong></div><small class="report-points">درجة السؤال: '+esc(q.points)+'</small></article>').join("")+'</div>';
+}
+async function loadStudentReports(){
+ const host=$("#studentReportList");if(!host||!sessionUser)return;
+ const {data,error}=await db.from("exam_reports").select("id,exam_title,score,max_score,wrong_questions,student_can_view_score,submitted_at").eq("student_id",sessionUser.id).order("submitted_at",{ascending:false}).limit(100);
+ if(error){console.error("Student reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل تقاريرك حاليًا.</div>';return}
+ if(!data?.length){host.innerHTML='<div class="empty-state">ستظهر تقاريرك هنا تلقائيًا بعد تسليم أول امتحان.</div>';return}
+ host.innerHTML=data.map(r=>'<article class="report-card"><div class="report-card-head"><div><span class="report-kicker">EXAM REPORT</span><h3>'+esc(r.exam_title)+'</h3><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score">'+(r.student_can_view_score?'<b>'+r.score+' / '+r.max_score+'</b>':'<b>محفوظ</b>')+'<small>'+(r.student_can_view_score?'الدرجة':'النتيجة مخفية')+'</small></div></div>'+(r.student_can_view_score?'<details class="report-details"><summary>مراجعة الإجابات الخاطئة ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details>':'<p class="hint">تم حفظ التقرير. تفاصيل التصحيح تخضع لإعدادات المدرس.</p>')+'</article>').join("");
+}
+async function loadTeacherReports(){
+ const host=$("#teacherReportList");if(!host||sessionUser?.id!=="5d0f01fe-d999-42e8-bb49-0b87a308e138")return;
+ const {data,error}=await db.from("exam_reports").select("id,student_name,exam_title,score,max_score,wrong_questions,submitted_at").eq("teacher_id",sessionUser.id).order("submitted_at",{ascending:false}).limit(250);
+ if(error){console.error("Teacher reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل التقارير. تحقق من صلاحيات قاعدة البيانات.</div>';return}
+ if(!data?.length){host.innerHTML='<div class="empty-state">لا توجد تقارير بعد. ستصل تقارير الطلاب هنا تلقائيًا فور تسليم الامتحانات.</div>';return}
+ host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
 }
 async function loadSubjects(){
  const s=$("#subjectSelect"),{data,error}=await db.from("subjects").select("id,name").order("name");
@@ -261,12 +280,21 @@ async function submitExam(event){
  const answers={};
  for(const q of activeQuestions){const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));if(!choice){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم.",true);return}answers[q.id]=Number(choice.value)}
  const b=$('button[type="submit"]',event.currentTarget);b.disabled=true;setStatus("#takeExamStatus","جارٍ تصحيح الإجابات وحفظ النتيجة...");
- const {data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers});b.disabled=false;
+ let {data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers});
+  if(error&&String(error.message||"").includes("استكمال اسمك الثلاثي")){
+   const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الثلاثي كاملًا:");
+   if(entered){
+    const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});
+    if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}
+    else error=saved.error;
+   }
+  }
+  b.disabled=false;
  if(error){console.error(error);setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول مرة أخرى.",true);return}
  const result=Array.isArray(data)?data[0]:data;
  const msg=result?.score==null?"تم تسليم الامتحان وحفظ المحاولة. النتيجة مخفية حسب إعداد المدرس.":"تم التصحيح بنجاح: "+result.score+" من "+result.max_score+".";
  setStatus("#takeExamStatus",msg);toast("تم حفظ إجابتك.");$("#examDialog").close();activeExam=null;activeQuestions=[];
- await Promise.all([loadAttempts(),loadExams()]);
+ await Promise.all([loadAttempts(),loadStudentReports(),loadExams()]);if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")await loadTeacherReports();
 }
 async function submitAuth(event){
  event.preventDefault();const form=event.currentTarget,b=$(".auth-submit",form),v=new FormData(form);
@@ -275,15 +303,15 @@ async function submitAuth(event){
  try{
   if(!/^[a-z0-9_]{3,24}$/.test(username))throw new Error("اسم المستخدم يجب أن يكون من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _.");
   if(authMode==="signup"){
-   const name=String(v.get("displayName")||"").trim()||"طالب";
+   const name=String(v.get("displayName")||"").trim();if(name.split(/\\s+/).length<3)throw new Error("اكتب اسمك الثلاثي كاملًا لإنشاء الحساب.");
    if(["admin","administrator","owner","root","support"].includes(username))throw new Error("اسم المستخدم محجوز.");
    const internalEmail=username+"@accounts.sealx2.invalid";
-   const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,username}}});
+   const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,full_name:name,username}}});
    if(error)throw error;
    if(!data.session)throw new Error("تعذر بدء الجلسة. تأكد من إيقاف تأكيد البريد الإلكتروني في إعدادات Supabase ثم أعد المحاولة.");
    const {error:sessionError}=await db.auth.setSession({access_token:data.session.access_token,refresh_token:data.session.refresh_token});
    if(sessionError)throw sessionError;
-   $("#authDialog").close();await refreshSession();toast("تم إنشاء الحساب. ينتظر الآن موافقة المدرس.");
+   $("#authDialog").close();await refreshSession();const nameSave=await db.rpc("set_my_full_name",{p_full_name:name});if(nameSave.error)console.error("Full name save:",nameSave.error);await loadProfile();updateAuthUI();toast("تم إنشاء الحساب. ينتظر الآن موافقة المدرس.");
   }else{
    const {data,error}=await db.functions.invoke("username-login",{body:{username,password}});
    if(error)throw new Error(data?.error||"اسم المستخدم أو كلمة المرور غير صحيحة.");
