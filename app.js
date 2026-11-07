@@ -123,8 +123,8 @@ function importExamCode(){
  const status=$("#importStatus"),preview=$("#importPreview");
  try{
   const parsed=readExamSource($("#examSourceCode").value);
-  const existingCards=$(".question-card",$("#questionBuilder"));
-  const hasEnteredData=existingCards.some(card=>$(".question-prompt",card).value.trim()||$(".question-option",card).some(input=>input.value.trim()));
+  const existingCards=$$(".question-card",$("#questionBuilder"));
+  const hasEnteredData=existingCards.some(card=>$(".question-prompt",card).value.trim()||$$(".question-option",card).some(input=>input.value.trim()));
   if(hasEnteredData&&!window.confirm("سيتم استبدال الأسئلة الموجودة حاليًا بالأسئلة المستوردة. هل تريد المتابعة؟"))return;
   if(parsed.title)$("#examForm [name=title]").value=parsed.title.slice(0,140);
   if(parsed.description)$("#examForm [name=description]").value=parsed.description.slice(0,500);
@@ -134,7 +134,7 @@ function importExamCode(){
   parsed.questions.forEach((q,i)=>{
    const card=addQuestion();
    $(".question-prompt",card).value=q.prompt;
-   $(".question-option",card).forEach((input,j)=>{if(j<q.options.length)input.value=q.options[j];else input.closest("label").hidden=true});
+   $$(".question-option",card).forEach((input,j)=>{if(j<q.options.length)input.value=q.options[j];else input.closest("label").hidden=true});
    $(".question-correct",card).innerHTML=q.options.map((_,j)=>'<option value="'+j+'">الاختيار '+(j+1)+'</option>').join("");
    $(".question-correct",card).value=String(q.correct_option);
    $(".question-points",card).value=String(q.points);
