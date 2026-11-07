@@ -281,8 +281,8 @@ async function submitExam(event){
  for(const q of activeQuestions){const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));if(!choice){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم.",true);return}answers[q.id]=Number(choice.value)}
  const b=$('button[type="submit"]',event.currentTarget);b.disabled=true;setStatus("#takeExamStatus","جارٍ تصحيح الإجابات وحفظ النتيجة...");
  let {data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers});
-  if(error&&String(error.message||"").includes("استكمال اسمك الثلاثي")){
-   const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الثلاثي كاملًا:");
+  if(error&&String(error.message||"").includes("استكمال اسمك الرباعي")){
+   const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");
    if(entered){
     const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});
     if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}
@@ -303,7 +303,7 @@ async function submitAuth(event){
  try{
   if(!/^[a-z0-9_]{3,24}$/.test(username))throw new Error("اسم المستخدم يجب أن يكون من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _.");
   if(authMode==="signup"){
-   const name=String(v.get("displayName")||"").trim();if(name.split(/\s+/).length<3)throw new Error("اكتب اسمك الثلاثي كاملًا لإنشاء الحساب.");
+   const name=String(v.get("displayName")||"").trim();if(name.split(/\s+/).length<3)throw new Error("اكتب اسمك الرباعي كاملًا لإنشاء الحساب.");
    if(["admin","administrator","owner","root","support"].includes(username))throw new Error("اسم المستخدم محجوز.");
    const internalEmail=username+"@accounts.sealx2.invalid";
    const {data,error}=await db.auth.signUp({email:internalEmail,password,options:{data:{display_name:name,full_name:name,username}}});
