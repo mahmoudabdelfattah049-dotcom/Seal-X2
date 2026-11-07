@@ -57,11 +57,26 @@ async function loadExams(){
  }).join("");
  $$("[data-start-exam]").forEach(b=>b.addEventListener("click",()=>startExam(b.dataset.startExam)));
 }
+const MINISTRY_SCIENCE_EVALUATIONS = [
+ {week:1,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_W1.pdf"},
+ {week:2,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_W2.pdf"},
+ {week:3,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_W3.pdf"},
+ {week:4,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_W4.pdf"},
+ {week:5,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_W5.pdf"},
+ {week:6,url:"https://elearnningcontent.blob.core.windows.net/elearnningcontent/2026_2027/Secondry/Secondry1/Term1/ClassrHomeAssessmentsTest/Integrated_science_ARABIC_Sec1_TR1_6W.pdf"}
+];
+function renderMinistryEvaluations(){
+ const host=$("#ministryEvaluationGrid");if(!host)return;
+ host.innerHTML=MINISTRY_SCIENCE_EVALUATIONS.map(x=>'<article class="content-card ministry-resource"><span class="card-icon">PDF</span><h3>تقييم الأسبوع '+x.week+'</h3><p>العلوم المتكاملة · أولى ثانوي · عربي</p><div class="card-foot"><span>وزارة التربية والتعليم</span><a href="'+x.url+'" target="_blank" rel="noopener noreferrer">تحميل PDF ↗</a></div></article>').join("");
+}
 async function loadResources(){
- const t=$("#resourceGrid"),{data,error}=await db.from("resources").select("*").eq("published",true).order("created_at",{ascending:false});
- if(error){console.error(error);t.innerHTML='<div class="loading-card">تعذر تحميل المصادر.</div>';return}
- if(!data?.length){t.innerHTML='<div class="loading-card">سيتم إضافة المصادر التعليمية هنا.</div>';return}
- t.innerHTML=data.map(r=>'<article class="content-card"><span class="card-icon">▤</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.description)+'</p><div class="card-foot"><span>مصدر تعليمي</span><a href="'+esc(r.resource_url)+'" target="_blank" rel="noopener noreferrer">فتح المصدر ↗</a></div></article>').join("");
+ const links=$("#resourceGrid"),pdfs=$("#teacherPdfGrid");
+ const {data,error}=await db.from("resources").select("*").eq("published",true).order("created_at",{ascending:false});
+ renderMinistryEvaluations();
+ if(error){console.error(error);links.innerHTML='<div class="loading-card">تعذر تحميل المصادر.</div>';pdfs.innerHTML='<div class="loading-card">تعذر تحميل ملفات المستر.</div>';return}
+ const rows=data||[],teacherFiles=rows.filter(r=>r.resource_type==="pdf"),other=rows.filter(r=>r.resource_type!=="pdf");
+ pdfs.innerHTML=teacherFiles.length?teacherFiles.map(r=>'<article class="content-card pdf-resource-card"><span class="card-icon">PDF</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.description||"ملف تعليمي من إعداد المستر.")+'</p><div class="card-foot"><span>ملف المستر</span><a href="'+esc(r.resource_url)+'" target="_blank" rel="noopener noreferrer">فتح / تحميل PDF ↗</a></div></article>').join(""):'<div class="empty-state">لم يرفع المستر ملفات PDF بعد. ستظهر الملفات هنا فور نشرها.</div>';
+ links.innerHTML=other.length?other.map(r=>'<article class="content-card"><span class="card-icon">▤</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.description)+'</p><div class="card-foot"><span>مصدر تعليمي</span><a href="'+esc(r.resource_url)+'" target="_blank" rel="noopener noreferrer">فتح المصدر ↗</a></div></article>').join(""):'<div class="empty-state">لا توجد روابط إضافية حاليًا.</div>';
 }
 async function loadAnnouncements(){
  const t=$("#announcementList"),{data,error}=await db.from("announcements").select("*").eq("published",true).order("pinned",{ascending:false}).order("created_at",{ascending:false});
@@ -345,6 +360,25 @@ async function submitResource(event){
  b.disabled=false;if(error){console.error(error);setStatus("#resourceStatus","تعذر إضافة المصدر.",true);return}
  f.reset();setStatus("#resourceStatus","تمت إضافة المصدر للمكتبة.");await loadResources();
 }
+async function submitPdfUpload(event){
+ event.preventDefault();if(!isStaff()||!sessionUser)return;
+ const form=event.currentTarget,values=new FormData(form),button=$('button[type="submit"]',form),file=values.get("pdfFile");
+ if(!(file instanceof File)||!file.size)return setStatus("#pdfUploadStatus","اختر ملف PDF أولًا.",true);
+ if(!file.name.toLowerCase().endsWith(".pdf")||(file.type&&file.type!=="application/pdf"))return setStatus("#pdfUploadStatus","الملف يجب أن يكون بصيغة PDF فقط.",true);
+ if(file.size>20*1024*1024)return setStatus("#pdfUploadStatus","حجم الملف أكبر من 20 ميجابايت.",true);
+ button.disabled=true;setStatus("#pdfUploadStatus","جارٍ رفع الملف...");
+ const safeName=file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"_").slice(-100)||"lesson.pdf";
+ const objectPath=sessionUser.id+"/"+Date.now()+"-"+crypto.randomUUID()+"-"+safeName;
+ const {data:uploaded,error:uploadError}=await db.storage.from("sealx2-teacher-pdfs").upload(objectPath,file,{cacheControl:"3600",contentType:"application/pdf",upsert:false});
+ if(uploadError){console.error(uploadError);button.disabled=false;setStatus("#pdfUploadStatus","تعذر رفع الملف. تحقق من الاتصال وحاول مرة أخرى.",true);return}
+ const {data:publicData}=db.storage.from("sealx2-teacher-pdfs").getPublicUrl(uploaded.path);
+ const {error:rowError}=await db.from("resources").insert({title:String(values.get("title")||file.name).trim(),description:String(values.get("description")||"").trim(),resource_url:publicData.publicUrl,resource_type:"pdf",published:true,created_by:sessionUser.id});
+ if(rowError){
+  console.error(rowError);await db.storage.from("sealx2-teacher-pdfs").remove([uploaded.path]);button.disabled=false;
+  setStatus("#pdfUploadStatus","تم رفع الملف لكن تعذر نشره في المكتبة. أُلغيت عملية الرفع.",true);return;
+ }
+ form.reset();button.disabled=false;setStatus("#pdfUploadStatus","تم رفع الملف ونشره للطلاب بنجاح.");toast("تم نشر ملف PDF في المكتبة.");await loadResources();
+}
 function bindEvents(){
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
@@ -353,7 +387,7 @@ function bindEvents(){
  $$("[data-mode]").forEach(b=>b.addEventListener("click",()=>setAuthMode(b.dataset.mode)));
  $("#authForm").addEventListener("submit",submitAuth);$("#logoutBtn").addEventListener("click",logout);
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
- $("#resourceForm").addEventListener("submit",submitResource);$("#takeExamForm").addEventListener("submit",submitExam);
+ $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#addQuestionBtn").addEventListener("click",addQuestion);
  $("#parseExamCodeBtn").addEventListener("click",importExamCode);$("#clearExamCodeBtn").addEventListener("click",()=>{$("#examSourceCode").value="";$("#importPreview").hidden=true;setStatus("#importStatus","");});
  $("#dangerUnlockBtn").addEventListener("click",()=>{if(!isOwner())return toast("هذه المنطقة لمالك المنصة فقط.");if(!dangerUnlocked){if(!window.confirm("تنبيه: أنت على وشك فتح منطقة الإدارة الحساسة. هل تريد المتابعة؟"))return;dangerUnlocked=true;$("#dangerContent").hidden=false;$("#dangerUnlockBtn").textContent="قفل أدوات الطوارئ";loadAccounts();}else{dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}});
