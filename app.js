@@ -130,7 +130,7 @@ function importExamCode(){
   const subject=$("#subjectSelect");if(subject.options.length&&![...subject.options].some(o=>o.selected))subject.selectedIndex=0;
   $("#questionBuilder").innerHTML="";
   parsed.questions.forEach((q,i)=>{
-   addQuestion();const card=$(".question-card",$("#questionBuilder"))[i];
+   const card=addQuestion();
    $(".question-prompt",card).value=q.prompt;
    $(".question-option",card).forEach((input,j)=>{if(j<q.options.length)input.value=q.options[j];else input.closest("label").hidden=true});
    $(".question-correct",card).innerHTML=q.options.map((_,j)=>'<option value="'+j+'">الاختيار '+(j+1)+'</option>').join("");
@@ -146,7 +146,7 @@ function addQuestion(){
  const host=$("#questionBuilder"),n=host.querySelectorAll(".question-card").length+1,card=document.createElement("section");
  card.className="question-card";
  card.innerHTML='<div class="question-card-head"><b>السؤال '+n+'</b><button type="button" class="btn btn-outline btn-small" data-remove-question>حذف</button></div><label>نص السؤال<textarea class="question-prompt" rows="2" maxlength="1200" required placeholder="اكتب السؤال هنا"></textarea></label><div class="options-grid">'+[0,1,2,3].map((x)=>'<label>الاختيار '+(x+1)+'<input class="question-option" maxlength="300" required placeholder="اكتب الاختيار"></label>').join("")+'</div><div class="settings-grid"><label>الإجابة الصحيحة<select class="question-correct"><option value="0">الاختيار الأول</option><option value="1">الاختيار الثاني</option><option value="2">الاختيار الثالث</option><option value="3">الاختيار الرابع</option></select></label><label>درجة السؤال<input class="question-points" type="number" min="1" max="100" value="1" required></label></div>';
- host.appendChild(card);renumberQuestions();
+ host.appendChild(card);renumberQuestions();return card;
 }
 function renumberQuestions(){$$(".question-card").forEach((c,i)=>$(".question-card-head b",c).textContent="السؤال "+(i+1))}
 function collectQuestions(){
