@@ -485,7 +485,7 @@ function bindEvents(){
    const subject="التقرير اليومي لنتائج الطلاب — "+archive.report_date+" — Seal X2";
    const body=dailyReportEmailText(archive);
    try{
-    await copyReportText("إلى: "+recipient+"\\nالموضوع: "+subject+"\\n\\n"+body);
+    await copyReportText("إلى: "+recipient+"\nالموضوع: "+subject+"\n\n"+body);
     toast("تم نسخ بيانات البريد والتقرير. افتح Gmail والصقها في رسالة جديدة.");
    }catch(err){
     console.error(err);
