@@ -380,7 +380,7 @@ async function submitExam(event,timedOut=false){
   const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");
   if(entered){const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}else error=saved.error;}
  }
- if(error){console.error(error);examSubmitting=false;b.disabled=false;setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول الضغط على زر التسليم مرة أخرى.",true);return}
+ if(error){console.error(error);examSubmitting=false;b.disabled=false;setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول الضغط على زر التسليم مرة أخرى.",true);if(activeExamDeadline&&activeExamDeadline>Date.now())examTimerInterval=setInterval(renderExamTimer,250);else{activeExamExpired=true;setTimeout(()=>submitExam(null,true),0)}return}
  const result=Array.isArray(data)?data[0]:data;
  const msg=result?.score==null?"تم تسليم الامتحان وحفظ المحاولة. النتيجة مخفية حسب إعداد المدرس.":"تم التصحيح بنجاح: "+result.score+" من "+result.max_score+".";
  setStatus("#takeExamStatus",msg);toast("تم حفظ إجابتك.");stopExamTimer();activeExamDeadline=null;$("#examDialog").close();activeExam=null;activeQuestions=[];activeExamExpired=false;examSubmitting=false;
