@@ -35,7 +35,7 @@ function updateAuthUI(){
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
  if(logged&&!pending){loadAttempts();loadStudentReports();}
- if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner())loadTeacherReportArchives();}
+ if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner()){loadTeacherReportArchives();startTeacherReportAutoRefresh();}}
  if(isOwner()&&!pending)loadAccounts();
  $("#roleLabel").textContent=isOwner()?"OWNER CONTROL":profile?.role==="admin"?"ADMIN WORKSPACE":profile?.role==="teacher"?"TEACHER WORKSPACE":"STAFF";
 }
@@ -109,6 +109,13 @@ async function loadTeacherReports(){
  host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
 }
 const reportArchiveCache=new Map();
+let reportArchiveRefreshTimer=null;
+function startTeacherReportAutoRefresh(){
+ if(reportArchiveRefreshTimer!==null)return;
+ reportArchiveRefreshTimer=setInterval(()=>{
+  if(document.visibilityState==="visible"&&sessionUser&&(isOwner()||sessionUser.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))loadTeacherReportArchives();
+ },8000);
+}
 async function copyReportText(text){
  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return;}
  const area=document.createElement("textarea");area.value=text;area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();const copied=document.execCommand("copy");area.remove();if(!copied)throw new Error("Clipboard unavailable");
