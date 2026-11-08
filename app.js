@@ -35,7 +35,7 @@ function updateAuthUI(){
  $("#ownerTools").hidden=!isOwner();
  if(!isOwner()){dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}
  if(logged&&!pending){loadAttempts();loadStudentReports();}
- if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner()){loadTeacherReportArchives();startTeacherReportAutoRefresh();}}
+ if(isStaff()&&!pending){loadSubjects();loadStaffExams();loadPendingApprovals();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")loadTeacherReports();if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"||isOwner()){loadTeacherReportArchives();}}
  if(isOwner()&&!pending)loadAccounts();
  $("#roleLabel").textContent=isOwner()?"OWNER CONTROL":profile?.role==="admin"?"ADMIN WORKSPACE":profile?.role==="teacher"?"TEACHER WORKSPACE":"STAFF";
 }
@@ -109,13 +109,6 @@ async function loadTeacherReports(){
  host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
 }
 const reportArchiveCache=new Map();
-let reportArchiveRefreshTimer=null;
-function startTeacherReportAutoRefresh(){
- if(reportArchiveRefreshTimer!==null)return;
- reportArchiveRefreshTimer=setInterval(()=>{
-  if(document.visibilityState==="visible"&&sessionUser&&(isOwner()||sessionUser.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))loadTeacherReportArchives();
- },8000);
-}
 async function copyReportText(text){
  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return;}
  const area=document.createElement("textarea");area.value=text;area.setAttribute("readonly","");area.style.position="fixed";area.style.opacity="0";document.body.appendChild(area);area.select();const copied=document.execCommand("copy");area.remove();if(!copied)throw new Error("Clipboard unavailable");
@@ -123,21 +116,22 @@ async function copyReportText(text){
 function reportPlainText(r){
  const wrong=Array.isArray(r.wrong_questions)?r.wrong_questions:[];
  return [
-  "Seal X2 — تقرير نتيجة طالب",
-  "اسم الطالب: "+(r.student_name||"—"),
-  "الامتحان: "+(r.exam_title||"—"),
-  "الدرجة: "+r.score+" / "+r.max_score,
-  "النسبة: "+(r.percentage??"—")+"%",
-  "الحالة: "+(r.passed?"اجتاز":"لم يجتز"),
-  "عدد الإجابات الخاطئة: "+(r.wrong_count??wrong.length),
-  "وقت التسليم: "+reportDate(r.submitted_at),
+  "السيد الأستاذ/ محمد عمارة المحترم،",
   "",
-  ...wrong.flatMap((q,i)=>[
-   "السؤال "+(i+1)+": "+(q.prompt||""),
-   "إجابتك: "+(q.selected_option||"لم تتم الإجابة"),
-   "الإجابة الصحيحة: "+(q.correct_option||""),
-   "—"
-  ])
+  "تحية طيبة وبعد،",
+  "نحيط سيادتكم علمًا بنتيجة الطالب المسجلة على منصة Seal X2:",
+  "",
+  "الاسم الرباعي: "+(r.student_name||"غير مسجل"),
+  "الامتحان: "+(r.exam_title||"—"),
+  "الدرجة: "+r.score+" من "+r.max_score,
+  "النسبة المئوية: "+(r.percentage??"—")+"%",
+  "عدد الأسئلة الخاطئة: "+(r.wrong_count??wrong.length),
+  "تاريخ ووقت التسليم: "+reportDate(r.submitted_at),
+  "",
+  "لمزيد من تفاصيل الأخطاء يرجى مراجعة التقرير من داخل المنصة.",
+  "",
+  "مع خالص التقدير،",
+  "نظام التقارير — Seal X2"
  ].join("\n");
 }
 async function loadTeacherReportArchives(){
@@ -177,7 +171,7 @@ async function loadTeacherReportArchives(){
   return '<article class="report-archive-file"><div class="report-archive-head"><div><span class="report-kicker">LIVE DAILY REPORT · '+(index===0?'الأحدث':'الأقدم')+'</span><h4>تقارير يوم '+esc(archive.report_date)+'</h4><small>محدّث من قاعدة البيانات عند فتح التقرير</small></div><div class="report-archive-meta"><b>'+Number(archive.count)+'</b><small>امتحان</small></div></div><div class="report-archive-stats"><span>متوسط الدرجات: <b>'+archive.average_percentage+'%</b></span><span>إجمالي المحاولات: <b>'+archive.count+'</b></span></div><div class="report-archive-students">'+reports.map(r=>{
    const rid=String(r.report_id);
    reportArchiveCache.set(rid,r);
-   return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage)+'%</small></div></div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-copy-archive-report="'+esc(rid)+'">نسخ تقرير الطالب</button></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
+   return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage)+'%</small></div></div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-copy-archive-report="'+esc(rid)+'">نسخ رسالة البريد للمستر</button></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
   }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
  }).join("");
 }
@@ -488,7 +482,7 @@ function bindEvents(){
  $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#reportArchiveList").addEventListener("click",async e=>{
   const copy=e.target.closest("[data-copy-archive-report]");
-  if(copy){const report=reportArchiveCache.get(copy.dataset.copyArchiveReport);if(!report)return;try{await copyReportText(reportPlainText(report));toast("تم نسخ تقرير الطالب.");}catch(err){console.error(err);toast("تعذر النسخ؛ افتح التقرير وحاول مرة أخرى.");}return;}
+  if(copy){const report=reportArchiveCache.get(copy.dataset.copyArchiveReport);if(!report)return;const body=reportPlainText(report);const recipient="emara100088@gmail.com";const subject="تقرير نتيجة الطالب "+(report.student_name||"")+" — Seal X2";const gmailUrl="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(recipient)+"&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);const composeWindow=window.open(gmailUrl,"_blank");try{await copyReportText("إلى: "+recipient+"\nالموضوع: "+subject+"\n\n"+body);toast(composeWindow?"تم نسخ الرسالة وفتح Gmail برسالة جاهزة للمستر.":"تم نسخ الرسالة. اسمح بفتح النوافذ المنبثقة لفتح Gmail مباشرة.");}catch(err){console.error(err);toast("تعذر النسخ؛ يمكنك استخدام نافذة Gmail إذا فُتحت.");}return;}
   const download=e.target.closest("[data-download-archive]");
   if(download){const archive=reportArchiveCache.get(download.dataset.downloadArchive);if(!archive)return;const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=download.dataset.downloadArchive.split("/").pop();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
  });
