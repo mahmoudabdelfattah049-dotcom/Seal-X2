@@ -130,6 +130,96 @@ function dailyReportEmailText(archive){
   "الطالب "+(index+1)+"\n"+reportPlainText(report)
  ).join("\n\n------------------------------\n\n");
 }
+
+const GOOGLE_OAUTH_CLIENT_ID="";
+const GMAIL_COMPOSE_SCOPE="https://www.googleapis.com/auth/gmail.compose";
+let gmailTokenClient=null;
+let gmailAccessToken=null;
+let pendingGmailArchivePath=null;
+function gmailStatus(message){
+ const el=$("#gmailStatus");
+ if(el)el.textContent=message;
+}
+function initGmailTokenClient(){
+ if(!GOOGLE_OAUTH_CLIENT_ID||GOOGLE_OAUTH_CLIENT_ID==="YOUR_GOOGLE_OAUTH_CLIENT_ID"){
+  toast("ربط Gmail يحتاج إعداد Google OAuth Client ID أولًا.");
+  gmailStatus("يلزم إعداد Google OAuth Client ID وربط نطاق الموقع في Google Cloud.");
+  return false;
+ }
+ if(!window.google?.accounts?.oauth2){
+  toast("تعذر تحميل خدمة تسجيل الدخول من Google. أعد تحميل الصفحة.");
+  return false;
+ }
+ gmailTokenClient=google.accounts.oauth2.initTokenClient({
+  client_id:GOOGLE_OAUTH_CLIENT_ID,
+  scope:GMAIL_COMPOSE_SCOPE,
+  callback:async response=>{
+   if(response.error||!response.access_token){
+    console.error("Google OAuth:",response);
+    gmailStatus("لم يكتمل تفويض Gmail.");
+    toast("لم يتم ربط Gmail. يمكنك المحاولة مرة أخرى.");
+    return;
+   }
+   gmailAccessToken=response.access_token;
+   gmailStatus("تم ربط Gmail لهذه الجلسة. لا تتم قراءة البريد الوارد.");
+   toast("تم ربط Gmail بنجاح.");
+   if(pendingGmailArchivePath){
+    const path=pendingGmailArchivePath;
+    pendingGmailArchivePath=null;
+    await createDailyGmailDraft(path);
+   }
+  }
+ });
+ return true;
+}
+function base64Bytes(bytes){
+ let binary="";
+ for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
+ return btoa(binary);
+}
+function base64UrlUtf8(value){
+ return base64Bytes(new TextEncoder().encode(value)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+}
+function base64MimeBody(value){
+ const encoded=base64Bytes(new TextEncoder().encode(value));
+ return encoded.match(/.{1,76}/g)?.join("\\r\\n")||"";
+}
+async function createDailyGmailDraft(path){
+ const archive=reportArchiveCache.get(path);
+ if(!archive||!gmailAccessToken)return;
+ const recipient="emara100088@gmail.com";
+ const subject="التقرير اليومي لنتائج الطلاب — "+archive.report_date+" — Seal X2";
+ const body=dailyReportEmailText(archive);
+ const mime=[
+  "To: "+recipient,
+  "Subject: =?UTF-8?B?"+base64Bytes(new TextEncoder().encode(subject))+"?=",
+  "MIME-Version: 1.0",
+  "Content-Type: text/plain; charset=UTF-8",
+  "Content-Transfer-Encoding: base64",
+  "",
+  base64MimeBody(body)
+ ].join("\\r\\n");
+ try{
+  const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts",{
+   method:"POST",
+   headers:{Authorization:"Bearer "+gmailAccessToken,"Content-Type":"application/json"},
+   body:JSON.stringify({message:{raw:base64UrlUtf8(mime)}})
+  });
+  const result=await response.json();
+  if(!response.ok)throw new Error(result?.error?.message||"Gmail API request failed");
+  gmailStatus("تم إنشاء مسودة تقرير "+archive.report_date+" داخل Gmail. راجعها في مجلد المسودات قبل الإرسال.");
+  toast("تم إنشاء مسودة Gmail بنجاح. افتح مجلد المسودات لمراجعتها وإرسالها يدويًا.");
+ }catch(error){
+  console.error("Gmail draft creation:",error);
+  gmailStatus("تعذر إنشاء المسودة: "+(error.message||"خطأ غير معروف"));
+  toast("تعذر إنشاء مسودة Gmail. تحقق من إعدادات OAuth وصلاحيات الحساب.");
+ }
+}
+function requestGmailDraft(path){
+ if(!initGmailTokenClient())return;
+ pendingGmailArchivePath=path;
+ gmailTokenClient.requestAccessToken({prompt:gmailAccessToken?"":"consent"});
+}
 async function loadTeacherReportArchives(){
  const host=$("#reportArchiveList");
  if(!host||!(isOwner()||sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))return;
@@ -168,7 +258,7 @@ async function loadTeacherReportArchives(){
    const rid=String(r.report_id);
    reportArchiveCache.set(rid,r);
    return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage)+'%</small></div></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
-  }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-primary" data-copy-daily-report="'+esc(path)+'">نسخ رسالة البريد لجميع طلاب اليوم</button><button type="button" class="btn btn-outline" data-copy-daily-report-manual="'+esc(path)+'">نسخ يدوي</button><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
+  }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-primary" data-create-gmail-draft="'+esc(path)+'">إنشاء مسودة Gmail</button><button type="button" class="btn btn-outline" data-copy-daily-report="'+esc(path)+'">فتح Gmail بالطريقة القديمة</button><button type="button" class="btn btn-outline" data-copy-daily-report-manual="'+esc(path)+'">نسخ يدوي</button><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
  }).join("");
 }
 async function loadSubjects(){
@@ -477,6 +567,8 @@ function bindEvents(){
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
  $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#reportArchiveList").addEventListener("click",async e=>{
+  const gmailDraft=e.target.closest("[data-create-gmail-draft]");
+  if(gmailDraft){requestGmailDraft(gmailDraft.dataset.createGmailDraft);return;}
   const manualCopy=e.target.closest("[data-copy-daily-report-manual]");
   if(manualCopy){
    const archive=reportArchiveCache.get(manualCopy.dataset.copyDailyReportManual);
