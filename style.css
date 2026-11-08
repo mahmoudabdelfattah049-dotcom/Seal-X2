@@ -582,3 +582,88 @@ dialog#examDialog .exam-question-prompt pre {
     box-shadow: 0 -8px 18px #0d1b2c;
   }
 }
+
+
+/* Final mobile viewport alignment: use the full phone width and a shared
+   content gutter; keep the exam dialog aligned with the page, not flush-left. */
+@media screen and (max-width: 700px) {
+  html, body {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    overflow-x: clip !important;
+  }
+  body, #home, main, header.topbar, footer {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+  }
+  .wrap, .topbar, footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: auto !important;
+    padding-inline: clamp(18px, 4vw, 28px) !important;
+  }
+  .section, .metrics, .hero {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+  }
+  dialog#examDialog.exam-dialog[open] {
+    position: fixed !important;
+    inset: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: auto !important;
+    border: 1px solid #34506b !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    transform: none !important;
+    direction: rtl !important;
+  }
+  dialog#examDialog.exam-dialog[open] > form#takeExamForm {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: max(20px, env(safe-area-inset-top)) clamp(16px, 4vw, 26px) max(22px, env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+    direction: rtl !important;
+  }
+  dialog#examDialog #takeExamTitle,
+  dialog#examDialog #takeExamMeta,
+  dialog#examDialog #examTimer,
+  dialog#examDialog #questionArea,
+  dialog#examDialog #takeExamStatus,
+  dialog#examDialog .exam-question,
+  dialog#examDialog .exam-options-list,
+  dialog#examDialog .exam-option {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  dialog#examDialog .exam-question-prompt,
+  dialog#examDialog .exam-option span {
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+}
+@media screen and (min-width: 701px) {
+  dialog#examDialog.exam-dialog[open] {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: min(760px, calc(100vw - 48px)) !important;
+    max-width: calc(100vw - 48px) !important;
+  }
+}
