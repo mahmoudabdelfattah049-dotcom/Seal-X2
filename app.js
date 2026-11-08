@@ -134,28 +134,44 @@ function reportPlainText(r){
  ].join("\n");
 }
 async function loadTeacherReportArchives(){
- const host=$("#reportArchiveList");if(!host||!(isOwner()||sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))return;
- host.innerHTML='<div class="empty-state">جارٍ تحميل ملفّي التقارير...</div>';
- const bucket=db.storage.from("sealx2-report-archive");
- const {data,error}=await bucket.list("daily",{limit:20,sortBy:{column:"name",order:"desc"}});
- if(error){console.error("Report archive list:",error);host.innerHTML='<div class="empty-state">تعذر تحميل أرشيف التقارير. تحقق من صلاحيات الحساب.</div>';return}
- const files=(data||[]).filter(x=>/^\d{4}-\d{2}-\d{2}\.json$/.test(x.name)).sort((a,b)=>b.name.localeCompare(a.name)).slice(0,2);
- if(!files.length){host.innerHTML='<div class="empty-state">لم يُنشأ أول ملف بعد. سيظهر تلقائيًا في موعد التقرير القادم.</div>';return}
- const archives=[];
- for(const file of files){
-  const path="daily/"+file.name;
-  const {data:blob,error:downloadError}=await bucket.download(path);
-  if(downloadError){console.error("Archive download:",downloadError);archives.push({path,file,archive:null});continue}
-  try{const archive=JSON.parse(await blob.text());reportArchiveCache.set(path,archive);archives.push({path,file,archive});}
-  catch(parseError){console.error("Archive parse:",parseError);archives.push({path,file,archive:null});}
+ const host=$("#reportArchiveList");
+ if(!host||!(isOwner()||sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138"))return;
+ host.innerHTML='<div class="empty-state">جارٍ تحميل التقارير اليومية المباشرة...</div>';
+ const {data,error}=await db.rpc("get_teacher_exam_reports");
+ if(error){
+  console.error("Live daily reports:",error);
+  host.innerHTML='<div class="empty-state">تعذر تحميل التقارير اليومية من قاعدة البيانات. تحقق من صلاحيات الحساب.</div>';
+  return;
  }
- host.innerHTML=archives.map(({path,file,archive})=>{
-  if(!archive)return '<article class="report-archive-file"><h4>ملف '+esc(file.name)+'</h4><p class="hint">تعذر قراءة هذا الملف.</p></article>';
-  const reports=Array.isArray(archive.reports)?archive.reports:[];
-  return '<article class="report-archive-file"><div class="report-archive-head"><div><span class="report-kicker">DAILY ARCHIVE · '+(path===archives[0].path?'الأحدث':'الأقدم')+'</span><h4>تقارير يوم '+esc(archive.report_date||file.name.replace(".json",""))+'</h4><small>آخر تحديث: '+reportDate(archive.generated_at)+'</small></div><div class="report-archive-meta"><b>'+Number(archive.count||0)+'</b><small>محاولة</small></div></div><div class="report-archive-stats"><span>المتوسط: <b>'+(archive.average_percentage??"—")+'%</b></span><span>اجتاز: <b>'+Number(archive.passed||0)+'</b></span><span>لم يجتز: <b>'+Number(archive.failed||0)+'</b></span></div><div class="report-archive-students">'+(reports.length?reports.map(r=>{
-   const rid=String(r.report_id||r.student_id||((r.student_name||"student")+"-"+(r.submitted_at||"report")));reportArchiveCache.set(rid,r);
-   return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage??"—")+'%</small></div></div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-copy-archive-report="'+esc(rid)+'">نسخ تقرير الطالب</button></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
-  }).join(""):'<div class="empty-state">لا توجد محاولات مسجلة في هذا اليوم.</div>')+'</div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل ملف اليوم JSON</button></div></article>';
+ const dateKey=v=>new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(v));
+ const grouped=new Map();
+ (data||[]).forEach(row=>{
+  const day=dateKey(row.submitted_at);
+  if(!grouped.has(day))grouped.set(day,[]);
+  const percentage=Number(row.max_score)>0?Math.round(Number(row.score)/Number(row.max_score)*100):0;
+  const wrong=Array.isArray(row.wrong_questions)?row.wrong_questions:[];
+  grouped.get(day).push({...row,report_id:row.id,percentage,wrong_count:wrong.length,passed:null});
+ });
+ const days=[...grouped.keys()].sort((a,b)=>b.localeCompare(a)).slice(0,2);
+ if(!days.length){
+  host.innerHTML='<div class="empty-state">لا توجد تقارير بعد. سيُضاف كل امتحان تلقائيًا إلى تقرير يومه فور التسليم.</div>';
+  return;
+ }
+ const archives=days.map(day=>{
+  const reports=grouped.get(day);
+  const percentages=reports.map(r=>r.percentage);
+  const archive={report_date:day,generated_at:new Date().toISOString(),count:reports.length,average_percentage:Math.round(percentages.reduce((a,b)=>a+b,0)/percentages.length),reports};
+  const path="daily/"+day+".json";
+  reportArchiveCache.set(path,archive);
+  return {path,archive};
+ });
+ host.innerHTML=archives.map(({path,archive},index)=>{
+  const reports=archive.reports;
+  return '<article class="report-archive-file"><div class="report-archive-head"><div><span class="report-kicker">LIVE DAILY REPORT · '+(index===0?'الأحدث':'الأقدم')+'</span><h4>تقارير يوم '+esc(archive.report_date)+'</h4><small>محدّث من قاعدة البيانات عند فتح التقرير</small></div><div class="report-archive-meta"><b>'+Number(archive.count)+'</b><small>امتحان</small></div></div><div class="report-archive-stats"><span>متوسط الدرجات: <b>'+archive.average_percentage+'%</b></span><span>إجمالي المحاولات: <b>'+archive.count+'</b></span></div><div class="report-archive-students">'+reports.map(r=>{
+   const rid=String(r.report_id);
+   reportArchiveCache.set(rid,r);
+   return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage)+'%</small></div></div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-copy-archive-report="'+esc(rid)+'">نسخ تقرير الطالب</button></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
+  }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
  }).join("");
 }
 async function loadSubjects(){
