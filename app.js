@@ -2,7 +2,7 @@
 const SUPABASE_URL = "https://hftmfcfaikjkepawppvv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_kmhzdsmzZjVAG4pAgwj7gg_GovehO0i";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let sessionUser = null, profile = null, authMode = "login", activeExam = null, activeQuestions = [], dangerUnlocked = false;
+let sessionUser = null, profile = null, authMode = "login", activeExam = null, activeQuestions = [], dangerUnlocked = false, activeExamDeadline = null, examTimerInterval = null, activeExamExpired = false, examSubmitting = false;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -330,6 +330,30 @@ async function loadAccounts(){
   input.value="";toast("تم تعيين كلمة المرور الجديدة.");
  }));
 }
+function safeExamHtml(value){
+ const parsed=new DOMParser().parseFromString(String(value??""),"text/html");
+ const allowed=new Set(["P","BR","STRONG","B","EM","I","U","UL","OL","LI","SUB","SUP","CODE","PRE","BLOCKQUOTE","H4","H5","TABLE","THEAD","TBODY","TR","TH","TD","HR"]);
+ const clean=node=>{
+  if(node.nodeType===Node.TEXT_NODE)return document.createTextNode(node.textContent||"");
+  if(node.nodeType!==Node.ELEMENT_NODE)return document.createDocumentFragment();
+  const fragment=document.createDocumentFragment();[...node.childNodes].forEach(child=>fragment.appendChild(clean(child)));
+  if(!allowed.has(node.tagName))return fragment;
+  const el=document.createElement(node.tagName.toLowerCase());el.appendChild(fragment);return el;
+ };
+ const out=document.createElement("div");[...parsed.body.childNodes].forEach(node=>out.appendChild(clean(node)));return out.innerHTML;
+}
+function stopExamTimer(){if(examTimerInterval!==null){clearInterval(examTimerInterval);examTimerInterval=null;}}
+function renderExamTimer(){
+ const el=$("#examTimer");if(!el||!activeExamDeadline)return;
+ const remaining=Math.max(0,activeExamDeadline-Date.now()),totalSeconds=Math.ceil(remaining/1000);
+ el.textContent=String(Math.floor(totalSeconds/60)).padStart(2,"0")+":"+String(totalSeconds%60).padStart(2,"0");
+ el.classList.toggle("timer-warning",remaining<=5*60*1000);
+ if(remaining<=0&&!activeExamExpired){activeExamExpired=true;stopExamTimer();toast("انتهى وقت الامتحان، جارٍ تسليم الإجابات تلقائيًا.");submitExam(null,true);}
+}
+function startExamTimer(minutes){
+ stopExamTimer();activeExamExpired=false;examSubmitting=false;activeExamDeadline=Date.now()+Math.max(1,Number(minutes)||1)*60*1000;renderExamTimer();examTimerInterval=setInterval(renderExamTimer,250);
+}
+
 async function startExam(id){
  if(!sessionUser){setAuthMode("login");$("#authDialog").showModal();toast("سجّل الدخول أولاً لبدء الامتحان.");return}
  const {data:exam,error:ee}=await db.from("exams").select("id,title,description,duration_minutes,show_score,pass_percent").eq("id",id).eq("published",true).single();
@@ -337,29 +361,29 @@ async function startExam(id){
  const {data:qs,error:qe}=await db.rpc("get_exam_questions",{p_exam_id:id});
  if(qe){console.error(qe);toast("تعذر تحميل أسئلة الامتحان.");return}
  if(!qs?.length){toast("هذا الامتحان لا يحتوي على أسئلة بعد.");return}
- activeExam=exam;activeQuestions=qs;$("#takeExamTitle").textContent=exam.title;$("#takeExamMeta").textContent=exam.duration_minutes+" دقيقة · النجاح من "+exam.pass_percent+"%";
- $("#questionArea").innerHTML=qs.map((q,i)=>'<section class="exam-question"><h3>'+(i+1)+'. '+esc(q.prompt)+'</h3><div class="exam-options-list">'+(q.options||[]).map((o,j)=>'<label class="exam-option"><input type="radio" name="answer-'+q.id+'" value="'+j+'" required><span>'+esc(o)+'</span></label>').join("")+'</div></section>').join("");
- setStatus("#takeExamStatus","");$("#examDialog").showModal();
+ activeExam=exam;activeQuestions=qs;$("#takeExamTitle").textContent=exam.title;$("#takeExamMeta").textContent="مدة الامتحان: "+exam.duration_minutes+" دقيقة · النجاح من "+exam.pass_percent+"%";
+ $("#questionArea").innerHTML=qs.map((q,i)=>'<section class="exam-question"><div class="exam-question-number">السؤال '+(i+1)+' <span>من '+qs.length+'</span></div><div class="exam-question-prompt">'+safeExamHtml(q.prompt)+'</div><div class="exam-options-list">'+(q.options||[]).map((o,j)=>'<label class="exam-option"><input type="radio" name="answer-'+q.id+'" value="'+j+'" required><span>'+safeExamHtml(o)+'</span></label>').join("")+'</div></section>').join("");
+ setStatus("#takeExamStatus","");$("#examDialog").showModal();startExamTimer(exam.duration_minutes);
 }
-async function submitExam(event){
- event.preventDefault();if(!activeExam||!sessionUser)return;
- const answers={};
- for(const q of activeQuestions){const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));if(!choice){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم.",true);return}answers[q.id]=Number(choice.value)}
- const b=$('button[type="submit"]',event.currentTarget);b.disabled=true;setStatus("#takeExamStatus","جارٍ تصحيح الإجابات وحفظ النتيجة...");
+async function submitExam(event,timedOut=false){
+ event?.preventDefault();if(!activeExam||!sessionUser||examSubmitting)return;
+ const expired=timedOut||activeExamExpired,answers={};
+ for(const q of activeQuestions){
+  const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));
+  if(!choice&&!expired){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم، أو انتظر انتهاء الوقت للتسليم التلقائي.",true);return}
+  if(choice)answers[q.id]=Number(choice.value);
+ }
+ examSubmitting=true;stopExamTimer();const form=$("#takeExamForm"),b=$('button[type="submit"]',form);b.disabled=true;
+ setStatus("#takeExamStatus",expired?"انتهى الوقت. جارٍ حفظ إجاباتك التي تم اختيارها...":"جارٍ تصحيح الإجابات وحفظ النتيجة...");
  let {data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers});
-  if(error&&String(error.message||"").includes("استكمال اسمك الرباعي")){
-   const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");
-   if(entered){
-    const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});
-    if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}
-    else error=saved.error;
-   }
-  }
-  b.disabled=false;
- if(error){console.error(error);setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول مرة أخرى.",true);return}
+ if(error&&String(error.message||"").includes("استكمال اسمك الرباعي")){
+  const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");
+  if(entered){const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}else error=saved.error;}
+ }
+ if(error){console.error(error);examSubmitting=false;b.disabled=false;setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول الضغط على زر التسليم مرة أخرى.",true);return}
  const result=Array.isArray(data)?data[0]:data;
  const msg=result?.score==null?"تم تسليم الامتحان وحفظ المحاولة. النتيجة مخفية حسب إعداد المدرس.":"تم التصحيح بنجاح: "+result.score+" من "+result.max_score+".";
- setStatus("#takeExamStatus",msg);toast("تم حفظ إجابتك.");$("#examDialog").close();activeExam=null;activeQuestions=[];
+ setStatus("#takeExamStatus",msg);toast("تم حفظ إجابتك.");stopExamTimer();activeExamDeadline=null;$("#examDialog").close();activeExam=null;activeQuestions=[];activeExamExpired=false;examSubmitting=false;
  await Promise.all([loadAttempts(),loadStudentReports(),loadExams()]);if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")await loadTeacherReports();
 }
 async function submitAuth(event){
@@ -433,7 +457,8 @@ function bindEvents(){
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
  $("#authClose").addEventListener("click",()=>$("#authDialog").close());
- $("#examClose").addEventListener("click",()=>$("#examDialog").close());
+ $("#examClose").addEventListener("click",()=>toast("الوقت يستمر أثناء الامتحان؛ سلّم إجاباتك أولاً."));
+  $("#examDialog").addEventListener("cancel",e=>{e.preventDefault();toast("لا يمكن إغلاق الامتحان قبل التسليم؛ عدّاد الوقت مستمر.");});
  $$("[data-mode]").forEach(b=>b.addEventListener("click",()=>setAuthMode(b.dataset.mode)));
  $("#authForm").addEventListener("submit",submitAuth);$("#logoutBtn").addEventListener("click",logout);
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
@@ -451,7 +476,7 @@ function bindEvents(){
  $("#menuBtn").addEventListener("click",()=>$("#mainNav").classList.toggle("open"));
  $("#mainNav").addEventListener("click",e=>{if(e.target.closest("a"))$("#mainNav").classList.remove("open")});
  $("#authDialog").addEventListener("click",e=>{if(e.target===$("#authDialog"))$("#authDialog").close()});
- $("#examDialog").addEventListener("click",e=>{if(e.target===$("#examDialog"))$("#examDialog").close()});
+ $("#examDialog").addEventListener("click",e=>{if(e.target===$("#examDialog"))toast("الوقت يستمر أثناء الامتحان؛ ارجع للأسئلة وأكمل الحل.")});
 }
 document.addEventListener("DOMContentLoaded",async()=>{
  bindEvents();addQuestion();setAuthMode("login");await refreshSession();
