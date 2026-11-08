@@ -484,12 +484,17 @@ function bindEvents(){
    const recipient="emara100088@gmail.com";
    const subject="التقرير اليومي لنتائج الطلاب — "+archive.report_date+" — Seal X2";
    const body=dailyReportEmailText(archive);
-   const gmailUrl="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(recipient)+"&su="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
-   const composeWindow=window.open(gmailUrl,"_blank");
+   const mailtoUrl="mailto:"+encodeURIComponent(recipient)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
    try{
     await copyReportText("إلى: "+recipient+"\nالموضوع: "+subject+"\n\n"+body);
-    toast(composeWindow?"تم نسخ تقرير جميع الطلاب وفتح Gmail برسالة جاهزة.":"تم نسخ التقرير. اسمح بالنوافذ المنبثقة لفتح Gmail مباشرة.");
-   }catch(err){console.error(err);toast("تعذر النسخ؛ إذا فُتحت نافذة Gmail يمكنك لصق التقرير فيها.");}
+    // mailto delegates directly to the device's configured mail app instead of opening Gmail's web inbox.
+    window.location.href=mailtoUrl;
+    toast("تم نسخ التقرير وطلب فتح تطبيق البريد برسالة جديدة جاهزة. راجعها ثم اضغط إرسال.");
+   }catch(err){
+    console.error(err);
+    window.location.href="mailto:"+encodeURIComponent(recipient)+"?subject="+encodeURIComponent(subject);
+    toast("تعذر نسخ نص التقرير؛ تم طلب فتح رسالة بريد جديدة. الصق النص يدويًا إذا لزم.");
+   }
    return;
   }
   const download=e.target.closest("[data-download-archive]");
