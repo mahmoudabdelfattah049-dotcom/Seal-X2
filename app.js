@@ -178,11 +178,11 @@ function base64Bytes(bytes){
  return btoa(binary);
 }
 function base64UrlUtf8(value){
- return base64Bytes(new TextEncoder().encode(value)).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+ return base64Bytes(new TextEncoder().encode(value)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 function base64MimeBody(value){
  const encoded=base64Bytes(new TextEncoder().encode(value));
- return encoded.match(/.{1,76}/g)?.join("\\r\\n")||"";
+ return encoded.match(/.{1,76}/g)?.join("\r\n")||"";
 }
 async function createDailyGmailDraft(path){
  const archive=reportArchiveCache.get(path);
@@ -198,7 +198,7 @@ async function createDailyGmailDraft(path){
   "Content-Transfer-Encoding: base64",
   "",
   base64MimeBody(body)
- ].join("\\r\\n");
+ ].join("\r\n");
  try{
   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts",{
    method:"POST",
