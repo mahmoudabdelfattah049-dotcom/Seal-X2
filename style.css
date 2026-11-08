@@ -328,3 +328,29 @@ dialog.dialog .privacy-note {
 .report-archive-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .report-archive-actions button{font-size:13px}
 @media(max-width:520px){.report-archive-file{padding:12px}.report-archive-head{align-items:flex-start}.report-archive-stats{gap:8px;flex-direction:column}}
+
+
+/* Clear exam timer and readable rich-text questions */
+.exam-timer-panel{position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 20px;padding:12px 15px;border:1px solid #65d8d055;border-radius:14px;background:rgba(7,21,34,.96);box-shadow:0 8px 24px #0003;backdrop-filter:blur(10px)}
+.exam-timer-panel>span{font-size:12px;color:var(--muted);font-weight:700}
+.exam-timer-panel strong{font-size:25px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:1px;color:var(--cyan)}
+.exam-timer-panel small{font-size:10px;color:var(--muted)}
+.exam-timer-panel strong.timer-warning{color:#ff9c75}
+.exam-question{padding:18px 0 20px;border-bottom:1px solid var(--line)}
+.exam-question-number{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--cyan);font-size:12px;font-weight:900}
+.exam-question-number span{color:var(--muted);font-weight:500}
+.exam-question-prompt{font-size:15px;line-height:2;color:var(--text);overflow-wrap:anywhere;margin-bottom:14px}
+.exam-question-prompt p,.exam-option span p{margin:5px 0}
+.exam-question-prompt h4,.exam-question-prompt h5{margin:12px 0 7px;color:var(--cyan)}
+.exam-question-prompt ul,.exam-question-prompt ol{padding-right:24px;margin:8px 0}
+.exam-question-prompt li{margin:5px 0}
+.exam-question-prompt blockquote{margin:10px 0;padding:9px 13px;border-right:3px solid var(--cyan);background:#65d8d00d;border-radius:8px}
+.exam-question-prompt pre,.exam-question-prompt code,.exam-option code{direction:ltr;text-align:left;unicode-bidi:plaintext;font-family:ui-monospace,Consolas,monospace;background:#06121f;border-radius:7px;padding:2px 6px;overflow-wrap:anywhere}
+.exam-question-prompt pre{padding:12px;overflow-x:auto;white-space:pre-wrap}
+.exam-question-prompt table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+.exam-question-prompt th,.exam-question-prompt td{border:1px solid var(--line);padding:8px;text-align:center}
+.exam-options-list{gap:10px}
+.exam-option{align-items:flex-start;padding:12px 14px;line-height:1.85;font-size:13px;border-radius:12px}
+.exam-option input{margin-top:6px;flex:0 0 auto}
+.exam-option span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:520px){.exam-timer-panel{flex-wrap:wrap;justify-content:space-between}.exam-timer-panel small{flex-basis:100%}.exam-question-prompt{font-size:14px}.exam-option{padding:11px}}
