@@ -484,16 +484,17 @@ function bindEvents(){
    const recipient="emara100088@gmail.com";
    const subject="التقرير اليومي لنتائج الطلاب — "+archive.report_date+" — Seal X2";
    const body=dailyReportEmailText(archive);
-   const mailtoUrl="mailto:"+encodeURIComponent(recipient)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+   const encodedSubject=encodeURIComponent(subject);
+   const encodedBody=encodeURIComponent(body);
+   const intentUrl="intent://compose?to="+encodeURIComponent(recipient)+"&subject="+encodedSubject+"&body="+encodedBody+"#Intent;scheme=mailto;package=com.google.android.gm;end";
    try{
     await copyReportText("إلى: "+recipient+"\nالموضوع: "+subject+"\n\n"+body);
-    // mailto delegates directly to the device's configured mail app instead of opening Gmail's web inbox.
-    window.location.href=mailtoUrl;
-    toast("تم نسخ التقرير وطلب فتح تطبيق البريد برسالة جديدة جاهزة. راجعها ثم اضغط إرسال.");
+    // Android Chrome intent explicitly targets Gmail instead of relying on the browser's mailto handler.
+    window.location.href=intentUrl;
+    toast("تم نسخ التقرير وطلب فتح تطبيق Gmail مباشرة. راجع الرسالة ثم اضغط إرسال.");
    }catch(err){
     console.error(err);
-    window.location.href="mailto:"+encodeURIComponent(recipient)+"?subject="+encodeURIComponent(subject);
-    toast("تعذر نسخ نص التقرير؛ تم طلب فتح رسالة بريد جديدة. الصق النص يدويًا إذا لزم.");
+    toast("تم تجهيز التقرير لكن تعذر نسخه أو فتح Gmail. انسخ التقرير من زر النسخ البديل إن ظهر.");
    }
    return;
   }
