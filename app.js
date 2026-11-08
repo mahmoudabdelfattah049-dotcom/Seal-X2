@@ -168,7 +168,7 @@ async function loadTeacherReportArchives(){
    const rid=String(r.report_id);
    reportArchiveCache.set(rid,r);
    return '<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+esc(r.score)+' / '+esc(r.max_score)+'</b><small>'+esc(r.percentage)+'%</small></div></div><details class="report-details"><summary>الإجابات الخاطئة ('+Number(r.wrong_count||0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>';
-  }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-primary" data-copy-daily-report="'+esc(path)+'">نسخ رسالة البريد لجميع طلاب اليوم</button><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
+  }).join("")+'</div><div class="report-archive-actions"><button type="button" class="btn btn-primary" data-copy-daily-report="'+esc(path)+'">نسخ رسالة البريد لجميع طلاب اليوم</button><button type="button" class="btn btn-outline" data-copy-daily-report-manual="'+esc(path)+'">نسخ يدوي</button><button type="button" class="btn btn-outline" data-download-archive="'+esc(path)+'">تنزيل تقرير اليوم JSON</button></div></article>';
  }).join("");
 }
 async function loadSubjects(){
@@ -477,6 +477,22 @@ function bindEvents(){
  $("#examForm").addEventListener("submit",saveExam);$("#announcementForm").addEventListener("submit",submitAnnouncement);
  $("#resourceForm").addEventListener("submit",submitResource);$("#pdfUploadForm").addEventListener("submit",submitPdfUpload);$("#takeExamForm").addEventListener("submit",submitExam);
  $("#reportArchiveList").addEventListener("click",async e=>{
+  const manualCopy=e.target.closest("[data-copy-daily-report-manual]");
+  if(manualCopy){
+   const archive=reportArchiveCache.get(manualCopy.dataset.copyDailyReportManual);
+   if(!archive)return;
+   const recipient="emara100088@gmail.com";
+   const subject="التقرير اليومي لنتائج الطلاب — "+archive.report_date+" — Seal X2";
+   const body=dailyReportEmailText(archive);
+   try{
+    await copyReportText("إلى: "+recipient+"\\nالموضوع: "+subject+"\\n\\n"+body);
+    toast("تم نسخ بيانات البريد والتقرير. افتح Gmail والصقها في رسالة جديدة.");
+   }catch(err){
+    console.error(err);
+    toast("تعذر النسخ. حاول مرة أخرى.");
+   }
+   return;
+  }
   const dailyCopy=e.target.closest("[data-copy-daily-report]");
   if(dailyCopy){
    const archive=reportArchiveCache.get(dailyCopy.dataset.copyDailyReport);
