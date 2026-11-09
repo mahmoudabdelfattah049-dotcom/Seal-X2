@@ -96,7 +96,7 @@ function reportWrongHtml(items){
 }
 function reportEssayHtml(items){
  if(!Array.isArray(items)||!items.length)return "";
- return '<section class="essay-feedback"><h4>مراجعة الإجابات المقالية</h4>'+items.map((item,i)=>'<article class="essay-feedback-item"><b>سؤال '+(i+1)+' · '+(item.accurate?'<span class="essay-match">مطابقة للإجابة النموذجية</span>':'<span class="essay-review">تحتاج مراجعة</span>')+'</b><p>'+esc(item.prompt||"")+'</p><small>إجابتك المحفوظة:</small><div>'+esc(item.student_answer||"لم تتم الإجابة")+'</div></article>').join("")+'</section>';
+ return '<section class="essay-feedback"><h4>مراجعة الإجابات المقالية</h4>'+items.map((item,i)=>'<article class="essay-feedback-item"><b>سؤال '+(i+1)+' · '+(item.accurate?'<span class="essay-match">مطابقة نصيًا للنموذج</span>':'<span class="essay-review">تحتاج مراجعة يدوية</span>')+'</b><p>'+esc(item.prompt||"")+'</p><small>إجابتك المحفوظة:</small><div>'+esc(item.student_answer||"لم تتم الإجابة")+'</div></article>').join("")+'</section>';
 }
 async function loadStudentReports(){
  const host=$("#studentReportList");if(!host||!sessionUser)return;
@@ -287,29 +287,29 @@ function parseJsLiteral(source,start){
  const result=value();return result;
 }
 function readMarkedExamSource(source){
- const blocks=source.split(/(?=^\\s*Q2Q\\b)/gm).map(x=>x.trim()).filter(x=>/^Q2Q\\b/.test(x));
+ const blocks=source.split(/(?=^\s*Q2Q\b)/gm).map(x=>x.trim()).filter(x=>/^Q2Q\b/.test(x));
  if(!blocks.length)throw new Error("لم يتم العثور على أي سؤال يبدأ بالرمز Q2Q.");
  if(blocks.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال.");
  const questions=blocks.map((block,index)=>{
-  const anr=block.search(/\\bANR\\s*\\(/);
+  const anr=block.search(/\bANR\s*\(/);
   if(anr<0)throw new Error("السؤال "+(index+1)+": لم يتم العثور على الإجابة بعد ANR.");
   const open=block.indexOf("(",anr);let depth=0,end=-1;
   for(let i=open;i<block.length;i++){if(block[i]==="(")depth++;else if(block[i]===")"&&--depth===0){end=i;break;}}
   if(end<0)throw new Error("السؤال "+(index+1)+": قوس ANR غير مكتمل.");
-  const answer=block.slice(open+1,end).trim(),beforeAnswer=block.slice(0,anr).replace(/^Q2Q\\s*/,"").trim();
-  const firstOption=beforeAnswer.search(/\\bC2C\\b/);
-  const prompt=(firstOption>=0?beforeAnswer.slice(0,firstOption):beforeAnswer).replace(/^س\\s*\\d+\\s*[:：.]?\\s*/,"").trim();
+  const answer=block.slice(open+1,end).trim(),beforeAnswer=block.slice(0,anr).replace(/^Q2Q\s*/,"").trim();
+  const firstOption=beforeAnswer.search(/\bC2C\b/);
+  const prompt=(firstOption>=0?beforeAnswer.slice(0,firstOption):beforeAnswer).replace(/^س\s*\d+\s*[:：.]?\s*/,"").trim();
   if(!prompt)throw new Error("نص السؤال "+(index+1)+" فارغ.");
-  if(/\\bCRC\\b/.test(block.slice(0,anr))){
-   const re=/C2C\\s+CRC\\s*\\(([^)]+)\\)\\s*([\\s\\S]*?)(?=C2C\\s+CRC\\b|$)/g,options=[],labels=[];let m;
+  if(/\bCRC\b/.test(block.slice(0,anr))){
+   const re=/C2C\s+CRC\s*\(([^)]+)\)\s*([\s\S]*?)(?=C2C\s+CRC\b|$)/g,options=[],labels=[];let m;
    const region=block.slice(0,anr);
-   while((m=re.exec(region))!==null){labels.push(m[1].trim().replace(/[()\\s]/g,""));options.push(m[2].trim());}
+   while((m=re.exec(region))!==null){labels.push(m[1].trim().replace(/[()\s]/g,""));options.push(m[2].trim());}
    if(options.length<2||options.length>6||options.some(x=>!x))throw new Error("السؤال "+(index+1)+": يجب أن يحتوي على اختيارات C2C CRC واضحة.");
-   const correct=labels.indexOf(answer.replace(/[()\\s]/g,""));
+   const correct=labels.indexOf(answer.replace(/[()\s]/g,""));
    if(correct<0)throw new Error("السؤال "+(index+1)+": قيمة ANR لا تطابق أي اختيار.");
    return {prompt,question_type:"mcq",options,correct_option:correct,points:1,model_answer:""};
   }
-  const model_answer=answer.replace(/^الإجابة\\s*[:：]\\s*/,"").trim();
+  const model_answer=answer.replace(/^الإجابة\s*[:：]\s*/,"").trim();
   if(!model_answer)throw new Error("السؤال المقالي "+(index+1)+" لا يحتوي على إجابة نموذجية بعد ANR.");
   return {prompt,question_type:"essay",options:[],correct_option:0,points:0,model_answer};
  });
@@ -317,9 +317,9 @@ function readMarkedExamSource(source){
 }
 function readExamSource(source){
  if(!source.trim())throw new Error("الصق كود ملف الامتحان أولاً.");
- if(/(^|\\n)\\s*Q2Q\\b/.test(source))return readMarkedExamSource(source);
- const doc=new DOMParser().parseFromString(source,"text/html"),scripts=[...doc.querySelectorAll("script")].map(x=>x.textContent||""),jsSource=scripts.join("\\n")||source;
- const match=jsSource.match(/\\b(?:const|let|var)\\s+questions\\s*=\\s*/);
+ if(/(^|\n)\s*Q2Q\b/.test(source))return readMarkedExamSource(source);
+ const doc=new DOMParser().parseFromString(source,"text/html"),scripts=[...doc.querySelectorAll("script")].map(x=>x.textContent||""),jsSource=scripts.join("\n")||source;
+ const match=jsSource.match(/\b(?:const|let|var)\s+questions\s*=\s*/);
  if(!match)throw new Error("لم أجد Q2Q أو مصفوفة questions داخل الكود.");
  const questions=parseJsLiteral(jsSource,match.index+match[0].length);
  if(!Array.isArray(questions)||!questions.length)throw new Error("مصفوفة الأسئلة فارغة أو ليست مصفوفة صحيحة.");
@@ -333,7 +333,7 @@ function readExamSource(source){
   return {prompt,question_type:"mcq",options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1),model_answer:""};
  });
  if(normalized.some(q=>!Number.isInteger(q.points)||q.points<1||q.points>100))throw new Error("درجة كل سؤال اختياري يجب أن تكون من 1 إلى 100.");
- const title=(doc.querySelector("title")?.textContent||"").trim(),lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim(),timeMatch=jsSource.match(/\\btimeLeft\\s*=\\s*(\\d+)\\s*;/),duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
+ const title=(doc.querySelector("title")?.textContent||"").trim(),lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim(),timeMatch=jsSource.match(/\btimeLeft\s*=\s*(\d+)\s*;/),duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
  return {title,description:lesson,duration:duration&&duration>=5&&duration<=180?duration:null,questions:normalized};
 }
 function importExamCode(){
