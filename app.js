@@ -94,19 +94,23 @@ function reportWrongHtml(items){
  if(!Array.isArray(items)||!items.length)return '<p class="report-perfect">ممتاز! لم توجد إجابات خاطئة في هذه المحاولة.</p>';
  return '<div class="report-wrong-list">'+items.map((q,i)=>'<article class="report-wrong"><b>السؤال '+(i+1)+'</b><p>'+esc(q.prompt)+'</p><div class="report-answer bad-answer"><small>إجابتك</small><strong>'+esc(q.selected_option||"لم تتم الإجابة")+'</strong></div><div class="report-answer good-answer"><small>الإجابة الصحيحة</small><strong>'+esc(q.correct_option||"")+'</strong></div><small class="report-points">درجة السؤال: '+esc(q.points)+'</small></article>').join("")+'</div>';
 }
+function reportEssayHtml(items){
+ if(!Array.isArray(items)||!items.length)return "";
+ return '<section class="essay-feedback"><h4>مراجعة الإجابات المقالية</h4>'+items.map((item,i)=>'<article class="essay-feedback-item"><b>سؤال '+(i+1)+' · '+(item.accurate?'<span class="essay-match">مطابقة للإجابة النموذجية</span>':'<span class="essay-review">تحتاج مراجعة</span>')+'</b><p>'+esc(item.prompt||"")+'</p><small>إجابتك المحفوظة:</small><div>'+esc(item.student_answer||"لم تتم الإجابة")+'</div></article>').join("")+'</section>';
+}
 async function loadStudentReports(){
  const host=$("#studentReportList");if(!host||!sessionUser)return;
  const {data,error}=await db.rpc("get_my_exam_reports");
  if(error){console.error("Student reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل تقاريرك حاليًا.</div>';return}
  if(!data?.length){host.innerHTML='<div class="empty-state">ستظهر تقاريرك هنا تلقائيًا بعد تسليم أول امتحان.</div>';return}
- host.innerHTML=data.map(r=>'<article class="report-card"><div class="report-card-head"><div><span class="report-kicker">EXAM REPORT</span><h3>'+esc(r.exam_title)+'</h3><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score">'+(r.student_can_view_score?'<b>'+r.score+' / '+r.max_score+'</b>':'<b>محفوظ</b>')+'<small>'+(r.student_can_view_score?'الدرجة':'النتيجة مخفية')+'</small></div></div>'+(r.student_can_view_score?'<details class="report-details"><summary>مراجعة الإجابات الخاطئة ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details>':'<p class="hint">تم حفظ التقرير. تفاصيل التصحيح تخضع لإعدادات المدرس.</p>')+'</article>').join("");
+ host.innerHTML=data.map(r=>'<article class="report-card"><div class="report-card-head"><div><span class="report-kicker">EXAM REPORT</span><h3>'+esc(r.exam_title)+'</h3><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score">'+(r.max_score===0&&r.essay_feedback?.length?'<b>—</b><small>لا درجة للمقالي</small>':r.student_can_view_score?'<b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small>':'<b>محفوظ</b><small>النتيجة مخفية</small>')+'</div></div>'+(r.essay_feedback?.length?reportEssayHtml(r.essay_feedback):'')+(r.student_can_view_score?'<details class="report-details"><summary>مراجعة الإجابات الخاطئة ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details>':'<p class="hint">تم حفظ التقرير. تفاصيل التصحيح تخضع لإعدادات المدرس.</p>')+'</article>').join("");
 }
 async function loadTeacherReports(){
  const host=$("#teacherReportList");if(!host||sessionUser?.id!=="5d0f01fe-d999-42e8-bb49-0b87a308e138")return;
  const {data,error}=await db.rpc("get_teacher_exam_reports");
  if(error){console.error("Teacher reports:",error);host.innerHTML='<div class="empty-state">تعذر تحميل التقارير. تحقق من صلاحيات قاعدة البيانات.</div>';return}
  if(!data?.length){host.innerHTML='<div class="empty-state">لا توجد تقارير بعد. ستصل تقارير الطلاب هنا تلقائيًا فور تسليم الامتحانات.</div>';return}
- host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score"><b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small></div></div><details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
+ host.innerHTML=data.map(r=>'<article class="report-card teacher-report"><div class="report-card-head"><div><span class="report-kicker">PRIVATE STUDENT REPORT</span><h3>'+esc(r.student_name)+'</h3><p>'+esc(r.exam_title)+'</p><small>'+reportDate(r.submitted_at)+'</small></div><div class="report-score">'+(r.max_score===0?'<b>—</b><small>لا درجة للمقالي</small>':'<b>'+r.score+' / '+r.max_score+'</b><small>الدرجة</small>')+'</div></div>'+(r.essay_feedback?.length?reportEssayHtml(r.essay_feedback):'')+'<details class="report-details"><summary>الأسئلة التي أخطأ فيها ('+(Array.isArray(r.wrong_questions)?r.wrong_questions.length:0)+')</summary>'+reportWrongHtml(r.wrong_questions)+'</details></article>').join("");
 }
 const reportArchiveCache=new Map();
 async function copyReportText(text){
@@ -282,70 +286,94 @@ function parseJsLiteral(source,start){
  };
  const result=value();return result;
 }
+function readMarkedExamSource(source){
+ const blocks=source.split(/(?=^\\s*Q2Q\\b)/gm).map(x=>x.trim()).filter(x=>/^Q2Q\\b/.test(x));
+ if(!blocks.length)throw new Error("لم يتم العثور على أي سؤال يبدأ بالرمز Q2Q.");
+ if(blocks.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال.");
+ const questions=blocks.map((block,index)=>{
+  const anr=block.search(/\\bANR\\s*\\(/);
+  if(anr<0)throw new Error("السؤال "+(index+1)+": لم يتم العثور على الإجابة بعد ANR.");
+  const open=block.indexOf("(",anr);let depth=0,end=-1;
+  for(let i=open;i<block.length;i++){if(block[i]==="(")depth++;else if(block[i]===")"&&--depth===0){end=i;break;}}
+  if(end<0)throw new Error("السؤال "+(index+1)+": قوس ANR غير مكتمل.");
+  const answer=block.slice(open+1,end).trim(),beforeAnswer=block.slice(0,anr).replace(/^Q2Q\\s*/,"").trim();
+  const firstOption=beforeAnswer.search(/\\bC2C\\b/);
+  const prompt=(firstOption>=0?beforeAnswer.slice(0,firstOption):beforeAnswer).replace(/^س\\s*\\d+\\s*[:：.]?\\s*/,"").trim();
+  if(!prompt)throw new Error("نص السؤال "+(index+1)+" فارغ.");
+  if(/\\bCRC\\b/.test(block.slice(0,anr))){
+   const re=/C2C\\s+CRC\\s*\\(([^)]+)\\)\\s*([\\s\\S]*?)(?=C2C\\s+CRC\\b|$)/g,options=[],labels=[];let m;
+   const region=block.slice(0,anr);
+   while((m=re.exec(region))!==null){labels.push(m[1].trim().replace(/[()\\s]/g,""));options.push(m[2].trim());}
+   if(options.length<2||options.length>6||options.some(x=>!x))throw new Error("السؤال "+(index+1)+": يجب أن يحتوي على اختيارات C2C CRC واضحة.");
+   const correct=labels.indexOf(answer.replace(/[()\\s]/g,""));
+   if(correct<0)throw new Error("السؤال "+(index+1)+": قيمة ANR لا تطابق أي اختيار.");
+   return {prompt,question_type:"mcq",options,correct_option:correct,points:1,model_answer:""};
+  }
+  const model_answer=answer.replace(/^الإجابة\\s*[:：]\\s*/,"").trim();
+  if(!model_answer)throw new Error("السؤال المقالي "+(index+1)+" لا يحتوي على إجابة نموذجية بعد ANR.");
+  return {prompt,question_type:"essay",options:[],correct_option:0,points:0,model_answer};
+ });
+ return {title:"",description:"",duration:null,questions};
+}
 function readExamSource(source){
  if(!source.trim())throw new Error("الصق كود ملف الامتحان أولاً.");
- const doc=new DOMParser().parseFromString(source,"text/html");
- const scripts=[...doc.querySelectorAll("script")].map(s=>s.textContent||"");
- const jsSource=scripts.join("\n")||source;
- const match=jsSource.match(/\b(?:const|let|var)\s+questions\s*=\s*/);
- if(!match)throw new Error("لم أجد مصفوفة questions داخل الكود. يجب أن تكون بصيغة const questions = [ ... ].");
+ if(/(^|\\n)\\s*Q2Q\\b/.test(source))return readMarkedExamSource(source);
+ const doc=new DOMParser().parseFromString(source,"text/html"),scripts=[...doc.querySelectorAll("script")].map(x=>x.textContent||""),jsSource=scripts.join("\\n")||source;
+ const match=jsSource.match(/\\b(?:const|let|var)\\s+questions\\s*=\\s*/);
+ if(!match)throw new Error("لم أجد Q2Q أو مصفوفة questions داخل الكود.");
  const questions=parseJsLiteral(jsSource,match.index+match[0].length);
  if(!Array.isArray(questions)||!questions.length)throw new Error("مصفوفة الأسئلة فارغة أو ليست مصفوفة صحيحة.");
- if(questions.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال في الامتحان الواحد.");
+ if(questions.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال.");
  const normalized=questions.map((q,i)=>{
   if(!q||typeof q!=="object"||Array.isArray(q))throw new Error("السؤال رقم "+(i+1)+" ليس كائن سؤال صحيحًا.");
   const prompt=String(q.q??q.prompt??"").trim(),options=q.opts??q.options,correct=Number(q.ans??q.correct_option);
   if(!prompt)throw new Error("نص السؤال رقم "+(i+1)+" غير موجود.");
-  if(!Array.isArray(options)||options.length!==4||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("السؤال رقم "+(i+1)+" يجب أن يحتوي على أربعة اختيارات نصية غير فارغة بالضبط.");
-  if(!Number.isInteger(correct)||correct<0||correct>=options.length)throw new Error("رقم الإجابة الصحيحة في السؤال رقم "+(i+1)+" غير صحيح. استخدم ترقيمًا يبدأ من صفر.");
-  return {prompt,options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1)};
+  if(!Array.isArray(options)||options.length<2||options.length>6||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("السؤال رقم "+(i+1)+" يجب أن يحتوي على اختيارين إلى ستة اختيارات.");
+  if(!Number.isInteger(correct)||correct<0||correct>=options.length)throw new Error("رقم الإجابة الصحيحة في السؤال رقم "+(i+1)+" غير صحيح.");
+  return {prompt,question_type:"mcq",options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1),model_answer:""};
  });
- if(normalized.some(q=>!Number.isInteger(q.points)||q.points<1||q.points>100))throw new Error("درجة كل سؤال يجب أن تكون عددًا صحيحًا من 1 إلى 100.");
- const title=(doc.querySelector("title")?.textContent||"").trim();
- const lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim();
- const timeMatch=jsSource.match(/\btimeLeft\s*=\s*(\d+)\s*;/);
- const duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
+ if(normalized.some(q=>!Number.isInteger(q.points)||q.points<1||q.points>100))throw new Error("درجة كل سؤال اختياري يجب أن تكون من 1 إلى 100.");
+ const title=(doc.querySelector("title")?.textContent||"").trim(),lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim(),timeMatch=jsSource.match(/\\btimeLeft\\s*=\\s*(\\d+)\\s*;/),duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
  return {title,description:lesson,duration:duration&&duration>=5&&duration<=180?duration:null,questions:normalized};
 }
 function importExamCode(){
- const status=$("#importStatus"),preview=$("#importPreview");
+ const preview=$("#importPreview");
  try{
-  const parsed=readExamSource($("#examSourceCode").value);
-  const existingCards=$$(".question-card",$("#questionBuilder"));
-  const hasEnteredData=existingCards.some(card=>$(".question-prompt",card).value.trim()||$$(".question-option",card).some(input=>input.value.trim()));
-  if(hasEnteredData&&!window.confirm("سيتم استبدال الأسئلة الموجودة حاليًا بالأسئلة المستوردة. هل تريد المتابعة؟"))return;
+  const parsed=readExamSource($("#examSourceCode").value),existing=$$(".question-card",$("#questionBuilder"));
+  const hasData=existing.some(card=>$(".question-prompt",card).value.trim()||$$(".question-option",card).some(x=>x.value.trim())||$(".question-model-answer",card)?.value.trim());
+  if(hasData&&!window.confirm("سيتم استبدال الأسئلة الموجودة حاليًا بالأسئلة المستوردة. هل تريد المتابعة؟"))return;
   if(parsed.title)$("#examForm [name=title]").value=parsed.title.slice(0,140);
   if(parsed.description)$("#examForm [name=description]").value=parsed.description.slice(0,500);
   if(parsed.duration)$("#examForm [name=duration]").value=parsed.duration;
-  const subject=$("#subjectSelect");if(subject.options.length&&![...subject.options].some(o=>o.selected))subject.selectedIndex=0;
   $("#questionBuilder").innerHTML="";
-  parsed.questions.forEach((q,i)=>{
-   const card=addQuestion();
-   $(".question-prompt",card).value=q.prompt;
-   $$(".question-option",card).forEach((input,j)=>{if(j<q.options.length)input.value=q.options[j];else input.closest("label").hidden=true});
-   $(".question-correct",card).innerHTML=q.options.map((_,j)=>'<option value="'+j+'">الاختيار '+(j+1)+'</option>').join("");
-   $(".question-correct",card).value=String(q.correct_option);
-   $(".question-points",card).value=String(q.points);
+  parsed.questions.forEach(q=>{
+   const card=addQuestion();$(".question-prompt",card).value=q.prompt;$(".question-type",card).value=q.question_type||"mcq";toggleQuestionType(card);
+   if(q.question_type==="essay")$(".question-model-answer",card).value=q.model_answer||"";
+   else{$$(".question-option",card).forEach((x,j)=>{if(j<q.options.length)x.value=q.options[j];else x.closest("label").hidden=true});$(".question-correct",card).innerHTML=q.options.map((_,j)=>'<option value="'+j+'">الاختيار '+(j+1)+'</option>').join("");$(".question-correct",card).value=String(q.correct_option);$(".question-points",card).value=String(q.points);}
   });
-  preview.hidden=false;preview.innerHTML='<b>تمت قراءة '+parsed.questions.length+' سؤالًا بنجاح.</b><span>العنوان: '+esc(parsed.title||"لم يُستخرج — اكتب العنوان يدويًا")+'</span><span>المدة: '+(parsed.duration?parsed.duration+" دقيقة":"لم تُستخرج — راجعها يدويًا")+'</span><span>الإجابة الصحيحة: تم نقلها من ans / correct_option لكل سؤال.</span><small>راجع المعاينة والأسئلة والإجابات قبل الحفظ أو النشر.</small>';
-  setStatus("#importStatus","تم تحليل الكود وملء منشئ الامتحان. لم يتم حفظ أو نشر الامتحان بعد.");
-  toast("تم استيراد الأسئلة إلى المنشئ.");
+  const mcq=parsed.questions.filter(q=>q.question_type==="mcq").length,essay=parsed.questions.length-mcq;
+  preview.hidden=false;preview.innerHTML='<b>تمت قراءة '+parsed.questions.length+' سؤالًا بنجاح.</b><span>اختياري: '+mcq+' · مقالي: '+essay+'</span><span>العنوان: '+esc(parsed.title||"اكتب العنوان يدويًا")+'</span><span>المدة: '+(parsed.duration?parsed.duration+" دقيقة":"راجعها يدويًا")+'</span><small>الإجابات النموذجية المقالية لا تظهر للطالب أثناء الامتحان.</small>';
+  setStatus("#importStatus","تم تحليل الأسئلة وملء المنشئ. لم يتم الحفظ أو النشر بعد.");toast("تم استيراد الأسئلة.");
  }catch(e){preview.hidden=true;setStatus("#importStatus",e.message||"تعذر قراءة الكود.",true)}
 }
 function addQuestion(){
- const host=$("#questionBuilder"),n=host.querySelectorAll(".question-card").length+1,card=document.createElement("section");
- card.className="question-card";
- card.innerHTML='<div class="question-card-head"><b>السؤال '+n+'</b><button type="button" class="btn btn-outline btn-small" data-remove-question>حذف</button></div><label>نص السؤال<textarea class="question-prompt" rows="2" maxlength="1200" required placeholder="اكتب السؤال هنا"></textarea></label><div class="options-grid">'+[0,1,2,3].map((x)=>'<label>الاختيار '+(x+1)+'<input class="question-option" maxlength="300" required placeholder="اكتب الاختيار"></label>').join("")+'</div><div class="settings-grid"><label>الإجابة الصحيحة<select class="question-correct"><option value="0">الاختيار الأول</option><option value="1">الاختيار الثاني</option><option value="2">الاختيار الثالث</option><option value="3">الاختيار الرابع</option></select></label><label>درجة السؤال<input class="question-points" type="number" min="1" max="100" value="1" required></label></div>';
- host.appendChild(card);renumberQuestions();return card;
+ const host=$("#questionBuilder"),n=host.querySelectorAll(".question-card").length+1,card=document.createElement("section");card.className="question-card";
+ card.innerHTML='<div class="question-card-head"><b>السؤال '+n+'</b><button type="button" class="btn btn-outline btn-small" data-remove-question>حذف</button></div><label>نص السؤال<textarea class="question-prompt" rows="2" maxlength="1200" required placeholder="اكتب السؤال هنا"></textarea></label><label>نوع السؤال<select class="question-type"><option value="mcq">اختيار من متعدد</option><option value="essay">سؤال مقالي</option></select></label><div class="question-mcq-fields"><div class="options-grid">'+[0,1,2,3].map(x=>'<label>الاختيار '+(x+1)+'<input class="question-option" maxlength="500" required placeholder="اكتب الاختيار"></label>').join("")+'</div><div class="settings-grid"><label>الإجابة الصحيحة<select class="question-correct"><option value="0">الاختيار الأول</option><option value="1">الاختيار الثاني</option><option value="2">الاختيار الثالث</option><option value="3">الاختيار الرابع</option></select></label><label>درجة السؤال<input class="question-points" type="number" min="1" max="100" value="1" required></label></div></div><div class="question-essay-fields" hidden><label>الإجابة النموذجية<textarea class="question-model-answer" rows="4" maxlength="5000" placeholder="اكتب الإجابة الصحيحة للمقارنة"></textarea></label><p class="hint">المقالي بلا درجة رقمية؛ تظهر للطالب نتيجة المقارنة فقط.</p></div>';
+ host.appendChild(card);toggleQuestionType(card);renumberQuestions();return card;
+}
+function toggleQuestionType(card){
+ const essay=$(".question-type",card)?.value==="essay";$(".question-mcq-fields",card).hidden=essay;$(".question-essay-fields",card).hidden=!essay;
+ $$(".question-option",card).forEach(x=>x.required=!essay);$(".question-model-answer",card).required=essay;$(".question-points",card).required=!essay;
 }
 function renumberQuestions(){$$(".question-card").forEach((c,i)=>$(".question-card-head b",c).textContent="السؤال "+(i+1))}
 function collectQuestions(){
  const cards=$$(".question-card",$("#questionBuilder"));if(!cards.length)throw new Error("أضف سؤالاً واحداً على الأقل.");
  return cards.map((c,i)=>{
-  const prompt=$(".question-prompt",c).value.trim(),options=$$(".question-option",c).map(x=>x.value.trim()),correct=Number($(".question-correct",c).value),points=Number($(".question-points",c).value);
-  if(!prompt||options.some(x=>!x))throw new Error("أكمل نص السؤال والاختيارات في السؤال "+(i+1)+".");
-  if(!Number.isInteger(points)||points<1||points>100)throw new Error("درجة السؤال "+(i+1)+" يجب أن تكون من 1 إلى 100.");
-  return {prompt,options,correct_option:correct,points,sort_order:i};
+  const prompt=$(".question-prompt",c).value.trim(),type=$(".question-type",c).value;if(!prompt)throw new Error("اكتب نص السؤال رقم "+(i+1)+".");
+  if(type==="essay"){const model_answer=$(".question-model-answer",c).value.trim();if(!model_answer)throw new Error("اكتب الإجابة النموذجية للسؤال المقالي رقم "+(i+1)+".");return {prompt,question_type:"essay",options:[],correct_option:0,points:0,model_answer,sort_order:i};}
+  const options=$$(".question-option",c).map(x=>x.value.trim()),correct=Number($(".question-correct",c).value),points=Number($(".question-points",c).value);
+  if(options.some(x=>!x))throw new Error("أكمل اختيارات السؤال "+(i+1)+".");if(!Number.isInteger(points)||points<1||points>100)throw new Error("درجة السؤال "+(i+1)+" يجب أن تكون من 1 إلى 100.");
+  return {prompt,question_type:"mcq",options,correct_option:correct,points,model_answer:null,sort_order:i};
  });
 }
 async function saveExam(event){
@@ -359,7 +387,7 @@ async function saveExam(event){
   if(!Number.isInteger(payload.duration_minutes)||payload.duration_minutes<5||payload.duration_minutes>180)throw new Error("مدة الامتحان يجب أن تكون بين 5 و180 دقيقة.");
   if(!Number.isInteger(payload.pass_percent)||payload.pass_percent<0||payload.pass_percent>100)throw new Error("نسبة النجاح يجب أن تكون بين 0 و100.");
   const created=await db.from("exams").insert(payload).select("id").single();if(created.error)throw created.error;
-  const rows=questions.map(q=>({exam_id:created.data.id,prompt:q.prompt,options:q.options,correct_option:q.correct_option,points:q.points,sort_order:q.sort_order}));
+  const rows=questions.map(q=>({exam_id:created.data.id,prompt:q.prompt,options:q.options,correct_option:q.correct_option,points:q.points,sort_order:q.sort_order,question_type:q.question_type,model_answer:q.model_answer}));
   const inserted=await db.from("exam_questions").insert(rows);
   if(inserted.error){console.error(inserted.error);throw new Error("تم إنشاء سجل الامتحان لكن تعذر حفظ الأسئلة. راجع صلاحيات قاعدة البيانات.");}
   form.reset();$("#questionBuilder").innerHTML="";addQuestion();
@@ -464,28 +492,23 @@ async function startExam(id){
  const {data:qs,error:qe}=await db.rpc("get_exam_questions",{p_exam_id:id});
  if(qe){console.error(qe);toast("تعذر تحميل أسئلة الامتحان.");return}
  if(!qs?.length){toast("هذا الامتحان لا يحتوي على أسئلة بعد.");return}
- activeExam=exam;activeQuestions=qs;$("#takeExamTitle").textContent=exam.title;$("#takeExamMeta").textContent="مدة الامتحان: "+exam.duration_minutes+" دقيقة · النجاح من "+exam.pass_percent+"%";
- $("#questionArea").innerHTML=qs.map((q,i)=>'<section class="exam-question"><div class="exam-question-number">السؤال '+(i+1)+' <span>من '+qs.length+'</span></div><div class="exam-question-prompt">'+safeExamHtml(q.prompt)+'</div><div class="exam-options-list">'+(q.options||[]).map((o,j)=>'<label class="exam-option"><input type="radio" name="answer-'+q.id+'" value="'+j+'" required><span>'+safeExamHtml(o)+'</span></label>').join("")+'</div></section>').join("");
+ activeExam=exam;activeQuestions=qs;$("#takeExamTitle").textContent=exam.title;$("#takeExamMeta").textContent="مدة الامتحان: "+exam.duration_minutes+" دقيقة · الاختياري فقط له درجة رقمية";
+ $("#questionArea").innerHTML=qs.map((q,i)=>'<section class="exam-question"><div class="exam-question-number">السؤال '+(i+1)+' <span>من '+qs.length+'</span> · '+(q.question_type==="essay"?"مقالي":"اختياري")+'</div><div class="exam-question-prompt">'+safeExamHtml(q.prompt)+'</div>'+(q.question_type==="essay"?'<label class="essay-answer-label">إجابتك<textarea class="essay-answer" name="answer-'+q.id+'" rows="5" maxlength="5000" required placeholder="اكتب إجابتك هنا..."></textarea></label>':'<div class="exam-options-list">'+(q.options||[]).map((o,j)=>'<label class="exam-option"><input type="radio" name="answer-'+q.id+'" value="'+j+'" required><span>'+safeExamHtml(o)+'</span></label>').join("")+'</div>')+'</section>').join("");
  setStatus("#takeExamStatus","");$("#examDialog").showModal();startExamTimer(exam.duration_minutes);
 }
 async function submitExam(event,timedOut=false){
  event?.preventDefault();if(!activeExam||!sessionUser||examSubmitting)return;
  const expired=timedOut||activeExamExpired,answers={};
  for(const q of activeQuestions){
-  const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));
-  if(!choice&&!expired){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم، أو انتظر انتهاء الوقت للتسليم التلقائي.",true);return}
-  if(choice)answers[q.id]=Number(choice.value);
+  if(q.question_type==="essay"){const field=$('textarea[name="answer-'+q.id+'"]',$("#questionArea")),value=field?.value.trim()||"";if(!value&&!expired){setStatus("#takeExamStatus","أكمل إجابة كل سؤال مقالي قبل التسليم، أو انتظر انتهاء الوقت.",true);return}if(value)answers[q.id]=value;}
+  else{const choice=$('input[name="answer-'+q.id+'"]:checked',$("#questionArea"));if(!choice&&!expired){setStatus("#takeExamStatus","جاوب عن كل الأسئلة قبل التسليم، أو انتظر انتهاء الوقت للتسليم التلقائي.",true);return}if(choice)answers[q.id]=Number(choice.value);}
  }
- examSubmitting=true;stopExamTimer();const form=$("#takeExamForm"),b=$('button[type="submit"]',form);b.disabled=true;
- setStatus("#takeExamStatus",expired?"انتهى الوقت. جارٍ حفظ إجاباتك التي تم اختيارها...":"جارٍ تصحيح الإجابات وحفظ النتيجة...");
+ examSubmitting=true;stopExamTimer();const form=$("#takeExamForm"),b=$('button[type="submit"]',form);b.disabled=true;setStatus("#takeExamStatus",expired?"انتهى الوقت. جارٍ حفظ إجاباتك...":"جارٍ مقارنة الإجابات وحفظ النتيجة...");
  let {data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers});
- if(error&&String(error.message||"").includes("استكمال اسمك الرباعي")){
-  const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");
-  if(entered){const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}else error=saved.error;}
- }
+ if(error&&String(error.message||"").includes("استكمال اسمك الرباعي")){const entered=window.prompt("لإرسال التقرير الخاص بالمدرس، اكتب اسمك الرباعي كاملًا:");if(entered){const saved=await db.rpc("set_my_full_name",{p_full_name:entered.trim()});if(!saved.error){profile.full_name=entered.trim();({data,error}=await db.rpc("submit_exam_attempt",{p_exam_id:activeExam.id,p_answers:answers}));}else error=saved.error;}}
  if(error){console.error(error);examSubmitting=false;b.disabled=false;setStatus("#takeExamStatus",error.message?.includes("Retakes")?"هذه المحاولة غير متاحة لأن الامتحان يسمح بمحاولة واحدة فقط.":"تعذر تسليم الامتحان. حاول الضغط على زر التسليم مرة أخرى.",true);if(activeExamDeadline&&activeExamDeadline>Date.now())examTimerInterval=setInterval(renderExamTimer,250);else{activeExamExpired=true;setTimeout(()=>submitExam(null,true),0)}return}
- const result=Array.isArray(data)?data[0]:data;
- const msg=result?.score==null?"تم تسليم الامتحان وحفظ المحاولة. النتيجة مخفية حسب إعداد المدرس.":"تم التصحيح بنجاح: "+result.score+" من "+result.max_score+".";
+ const result=Array.isArray(data)?data[0]:data,essayResults=Array.isArray(result?.essay_feedback)?result.essay_feedback:[],accurateCount=essayResults.filter(x=>x.accurate).length;
+ const msg=(result?.score==null?"تم تسليم الامتحان وحفظ المحاولة.":result.max_score===0?"تم التسليم؛ لا توجد درجة رقمية للأسئلة المقالية.":"تم التصحيح: "+result.score+" من "+result.max_score+".")+(essayResults.length?" · المقالي المطابق: "+accurateCount+" من "+essayResults.length:"");
  setStatus("#takeExamStatus",msg);toast("تم حفظ إجابتك.");stopExamTimer();activeExamDeadline=null;$("#examDialog").close();activeExam=null;activeQuestions=[];activeExamExpired=false;examSubmitting=false;
  await Promise.all([loadAttempts(),loadStudentReports(),loadExams()]);if(sessionUser?.id==="5d0f01fe-d999-42e8-bb49-0b87a308e138")await loadTeacherReports();
 }
@@ -613,6 +636,7 @@ function bindEvents(){
  $("#parseExamCodeBtn").addEventListener("click",importExamCode);$("#clearExamCodeBtn").addEventListener("click",()=>{$("#examSourceCode").value="";$("#importPreview").hidden=true;setStatus("#importStatus","");});
  $("#dangerUnlockBtn").addEventListener("click",()=>{if(!isOwner())return toast("هذه المنطقة لمالك المنصة فقط.");if(!dangerUnlocked){if(!window.confirm("تنبيه: أنت على وشك فتح منطقة الإدارة الحساسة. هل تريد المتابعة؟"))return;dangerUnlocked=true;$("#dangerContent").hidden=false;$("#dangerUnlockBtn").textContent="قفل أدوات الطوارئ";loadAccounts();}else{dangerUnlocked=false;$("#dangerContent").hidden=true;$("#dangerUnlockBtn").textContent="فتح أدوات الطوارئ";}});
  $("#questionBuilder").addEventListener("click",e=>{const b=e.target.closest("[data-remove-question]");if(b){b.closest(".question-card").remove();renumberQuestions()}});
+ $("#questionBuilder").addEventListener("change",e=>{if(e.target.matches(".question-type"))toggleQuestionType(e.target.closest(".question-card"))});
  $("#menuBtn").addEventListener("click",()=>$("#mainNav").classList.toggle("open"));
  $("#mainNav").addEventListener("click",e=>{if(e.target.closest("a"))$("#mainNav").classList.remove("open")});
  $("#authDialog").addEventListener("click",e=>{if(e.target===$("#authDialog"))$("#authDialog").close()});
