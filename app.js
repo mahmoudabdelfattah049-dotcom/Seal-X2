@@ -53,7 +53,7 @@ async function loadExams(){
  const done=new Set(ids);
  target.innerHTML=data.map(e=>{
   const blocked=!e.allow_retake&&done.has(e.id);
-  return '<article class="content-card"><span class="card-icon">✎</span><h3>'+esc(e.title)+'</h3><p>'+esc(e.description||"اختبار العلوم المتكاملة")+'</p><div class="student-exam-meta"><span class="exam-pill">'+esc(e.subjects?.name||"العلوم المتكاملة")+'</span><span>'+e.duration_minutes+' دقيقة</span><span>'+e.pass_percent+'% للنجاح</span></div><div class="card-foot"><span>'+(blocked?"تمت المحاولة":"اختيار من متعدد")+'</span><button '+(blocked?"disabled":"")+' data-start-exam="'+e.id+'">'+(blocked?"غير متاح":"ابدأ الامتحان ↗")+'</button></div></article>';
+  return '<article class="content-card"><span class="card-icon">✎</span><h3>'+esc(e.title)+'</h3><p>'+esc(e.description||"اختبار العلوم المتكاملة")+'</p><div class="student-exam-meta"><span class="exam-pill">'+esc(e.subjects?.name||"العلوم المتكاملة")+'</span><span>'+e.duration_minutes+' دقيقة</span><span>'+e.pass_percent+'% للنجاح</span></div><div class="card-foot"><span>'+(blocked?"تمت المحاولة":"امتحان إلكتروني")+'</span><button '+(blocked?"disabled":"")+' data-start-exam="'+e.id+'">'+(blocked?"غير متاح":"ابدأ الامتحان ↗")+'</button></div></article>';
  }).join("");
  $$("[data-start-exam]").forEach(b=>b.addEventListener("click",()=>startExam(b.dataset.startExam)));
 }
@@ -87,7 +87,7 @@ async function loadAnnouncements(){
 async function loadAttempts(){
  const t=$("#attemptList"),{data,error}=await db.rpc("get_my_attempts");
  if(error){console.error(error);t.textContent="تعذر تحميل النتائج.";return}
- t.innerHTML=data?.length?data.map(a=>'<div class="attempt-item"><span>'+esc(a.exam_title||"امتحان")+'<br><small>'+dateLabel(a.submitted_at)+'</small></span><b>'+(a.score===null?"تم التسليم":a.score+" / "+a.max_score)+'</b></div>').join(""):'<div class="loading-card">ستظهر نتائجك هنا بعد حل أول امتحان.</div>';
+ t.innerHTML=data?.length?data.map(a=>'<div class="attempt-item"><span>'+esc(a.exam_title||"امتحان")+'<br><small>'+dateLabel(a.submitted_at)+'</small></span><b>'+(a.score===null?"تم التسليم":a.max_score===0?"تم التسليم · بلا درجة للمقالي":a.score+" / "+a.max_score)+'</b></div>').join(""):'<div class="loading-card">ستظهر نتائجك هنا بعد حل أول امتحان.</div>';
 }
 function reportDate(v){return new Date(v).toLocaleString("ar-EG",{dateStyle:"medium",timeStyle:"short"})}
 function reportWrongHtml(items){
