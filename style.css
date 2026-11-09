@@ -667,3 +667,20 @@ dialog#examDialog .exam-question-prompt pre {
     max-width: calc(100vw - 48px) !important;
   }
 }
+
+/* Mixed MCQ + essay exam support */
+[hidden]{display:none!important}
+.question-card .question-type{width:100%;margin-top:6px}
+.question-essay-fields,.question-mcq-fields{margin-top:12px}
+.question-essay-fields textarea,.essay-answer{width:100%;min-height:110px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px;outline:none}
+.essay-answer-label{display:block;margin-top:14px;font-weight:700}
+.essay-answer{margin-top:8px;line-height:1.9}
+.essay-feedback{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(101,216,208,.045)}
+.essay-feedback h4{margin:0 0 10px}
+.essay-feedback-item{padding:12px 0;border-top:1px solid var(--line)}
+.essay-feedback-item:first-of-type{border-top:0}
+.essay-feedback-item p{margin:8px 0}
+.essay-feedback-item small{display:block;color:var(--muted);margin:8px 0 4px}
+.essay-feedback-item>div{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel2);padding:10px;border-radius:10px}
+.essay-match{color:var(--cyan)}
+.essay-review{color:var(--gold)}
