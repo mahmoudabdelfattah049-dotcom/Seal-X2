@@ -684,3 +684,65 @@ dialog#examDialog .exam-question-prompt pre {
 .essay-feedback-item>div{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--panel2);padding:10px;border-radius:10px}
 .essay-match{color:var(--cyan)}
 .essay-review{color:var(--gold)}
+
+
+/* Expand/collapse groups: compact by default, with a clear touch target. */
+.content-disclosure{
+  margin: 12px 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(13,27,44,.58);
+  overflow: clip;
+}
+.content-disclosure > summary{
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 15px;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.content-disclosure > summary::-webkit-details-marker{display:none}
+.content-disclosure > summary::after{
+  content: "+";
+  display: grid;
+  place-items: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--cyan);
+  font-size: 19px;
+  line-height: 1;
+}
+.content-disclosure[open] > summary{
+  border-bottom: 1px solid var(--line);
+  background: rgba(101,216,208,.045);
+}
+.content-disclosure[open] > summary::after{content:"−"}
+.content-disclosure > :not(summary){margin-top:14px}
+.content-disclosure > .library-subsection,
+.content-disclosure > .form-panel,
+.content-disclosure > .panel{margin:0;padding:16px;border:0;border-radius:0;background:transparent}
+.content-disclosure > #examGrid,
+.content-disclosure > #announcementList,
+.content-disclosure > #attemptList,
+.content-disclosure > #studentReportList,
+.content-disclosure > #teacherReportList,
+.content-disclosure > #reportArchiveList,
+.content-disclosure > #pendingApprovalList,
+.content-disclosure > #staffExamList,
+.content-disclosure > #accountList,
+.content-disclosure > #questionBuilder{padding:0 14px 14px}
+.content-disclosure > #examForm{margin:0}
+.content-disclosure .content-disclosure{margin:10px 0}
+@media(max-width:600px){
+ .content-disclosure{margin:9px 0 14px;border-radius:13px}
+ .content-disclosure > summary{min-height:46px;padding:9px 12px;font-size:14px}
+}
