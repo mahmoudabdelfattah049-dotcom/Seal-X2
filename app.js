@@ -581,6 +581,15 @@ async function submitPdfUpload(event){
 }
 
 function bindEvents(){
+ // Open a collapsed destination before the browser scrolls to an in-page link.
+ document.addEventListener("click",event=>{
+  const link=event.target.closest('a[href^="#"]');
+  if(!link)return;
+  const id=decodeURIComponent(link.getAttribute("href").slice(1));
+  if(!id)return;
+  const destination=document.getElementById(id);
+  if(destination instanceof HTMLDetailsElement)destination.open=true;
+ },true);
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
  $("#authClose").addEventListener("click",()=>$("#authDialog").close());
