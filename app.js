@@ -585,7 +585,6 @@ function openAccordionDestination(id){
  let destination=null;
  try{destination=document.getElementById(decodeURIComponent(id));}catch(error){return null;}
  if(!destination)return null;
- // Open the target itself and every collapsed details parent, from inside out.
  let current=destination;
  while(current){
   if(current instanceof HTMLDetailsElement)current.open=true;
@@ -594,16 +593,33 @@ function openAccordionDestination(id){
  return destination;
 }
 function bindEvents(){
- // Handle every in-page navigation link, including hero buttons and the mobile menu.
+ // Take control of in-page links so the accordion opens before scrolling.
  document.addEventListener("click",event=>{
   const clicked=event.target instanceof Element?event.target:event.target?.parentElement;
   const link=clicked?.closest('a[href^="#"]');
   if(!link)return;
-  const hash=link.getAttribute("href").slice(1);
-  openAccordionDestination(hash);
+  const raw=link.getAttribute("href");
+  if(!raw||raw==="#")return;
+  const id=raw.slice(1);
+  const destination=openAccordionDestination(id);
+  if(!destination)return;
+  event.preventDefault();
+  const hash="#"+encodeURIComponent(id);
+  if(window.location.hash!==hash)history.pushState(null,"",hash);
+  // Wait for the browser to apply the open state, then scroll to the visible heading.
+  requestAnimationFrame(()=>{
+   openAccordionDestination(id);
+   destination.scrollIntoView({behavior:"smooth",block:"start"});
+  });
  },true);
- // Also support direct links and browser back/forward navigation to a collapsed section.
- window.addEventListener("hashchange",()=>openAccordionDestination(window.location.hash.slice(1)));
+ window.addEventListener("hashchange",()=>{
+  const destination=openAccordionDestination(window.location.hash.slice(1));
+  if(destination)requestAnimationFrame(()=>destination.scrollIntoView({behavior:"smooth",block:"start"}));
+ });
+ window.addEventListener("popstate",()=>{
+  const destination=openAccordionDestination(window.location.hash.slice(1));
+  if(destination)requestAnimationFrame(()=>destination.scrollIntoView({behavior:"smooth",block:"start"}));
+ });
  if(window.location.hash)openAccordionDestination(window.location.hash.slice(1));
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
