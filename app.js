@@ -580,46 +580,6 @@ async function submitPdfUpload(event){
  form.reset();button.disabled=false;setStatus("#pdfUploadStatus","تم رفع الملف ونشره للطلاب بنجاح.");toast("تم نشر ملف PDF في المكتبة.");await loadResources();
 }
 
-/* Compact, independently expandable content groups. All groups start collapsed. */
-function addDisclosure(element,title){
- if(!element||element.dataset.disclosureReady==="true")return;
- const details=document.createElement("details");
- details.className="content-disclosure";
- const summary=document.createElement("summary");
- summary.className="content-disclosure-summary";
- summary.textContent=title;
- details.appendChild(summary);
- element.parentNode.insertBefore(details,element);
- details.appendChild(element);
- element.dataset.disclosureReady="true";
-}
-function initContentDisclosures(){
- // Public learning areas
- addDisclosure($("#examGrid"),"عرض الامتحانات");
- $(".library-subsection").forEach((el,i)=>{
-  const heading=$("h3",el)?.textContent?.trim()||("قسم المكتبة "+(i+1));
-  addDisclosure(el,heading);
- });
- addDisclosure($("#announcementList"),"عرض الإعلانات");
- // Student dashboard
- addDisclosure($("#attemptList"),"عرض محاولاتك ونتائجك");
- addDisclosure($("#studentReportList"),"عرض التقارير التفصيلية");
- // Teacher workspace lists and tools
- addDisclosure($("#teacherReportList"),"عرض تقارير الطلاب");
- addDisclosure($("#reportArchiveList"),"عرض أرشيف التقارير");
- addDisclosure($("#pendingApprovalList"),"عرض طلبات الانضمام");
- addDisclosure($("#staffExamList"),"عرض الامتحانات وإدارتها");
- addDisclosure($("#accountList"),"عرض حسابات المنصة");
- addDisclosure($("#questionBuilder"),"عرض أسئلة الامتحان");
- addDisclosure($("#examForm"),"فتح منشئ الامتحانات");
- addDisclosure($("#announcementForm"),"فتح نموذج نشر إعلان");
- addDisclosure($("#resourceForm"),"فتح نموذج إضافة مصدر");
- addDisclosure($("#pdfUploadForm"),"فتح نموذج رفع ملف PDF");
- // The import tool is also collapsed until explicitly opened.
- const importer=$(".code-import");
- if(importer)importer.open=false;
-}
-
 function bindEvents(){
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
@@ -684,7 +644,7 @@ function bindEvents(){
  $("#examDialog").addEventListener("click",e=>{if(e.target===$("#examDialog"))toast("الوقت يستمر أثناء الامتحان؛ ارجع للأسئلة وأكمل الحل.")});
 }
 document.addEventListener("DOMContentLoaded",async()=>{
- bindEvents();initContentDisclosures();addQuestion();setAuthMode("login");await refreshSession();
+ bindEvents();addQuestion();setAuthMode("login");await refreshSession();
  db.auth.onAuthStateChange((_event,session)=>{
   sessionUser=session?.user||null;
   window.setTimeout(async()=>{await loadProfile();updateAuthUI();await Promise.all([loadExams(),loadResources(),loadAnnouncements()]);},0);
