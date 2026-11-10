@@ -8,10 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261110-fold-1">
+  <link rel="stylesheet" href="style.css?v=20261110-library-accordion-2">
   <script src="https://accounts.google.com/gsi/client" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app.js?v=20261110-fold-1"></script>
+  <script defer src="app.js?v=20261110-library-accordion-2"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
@@ -34,18 +34,18 @@
     <section id="approvalGate" class="section wrap approval-gate" hidden><div class="approval-card"><span class="kicker">ACCOUNT REVIEW</span><h2>حسابك في انتظار موافقة المدرس</h2><p>تم تسجيل حسابك. بمجرد موافقة المدرس، ستُفتح لك المنصة بكل صلاحيات الطالب.</p><span class="approval-state">● طلب الانضمام قيد المراجعة</span></div></section>
     <section id="metrics" class="metrics wrap"><div><b>01</b><span>العلوم المتكاملة</span></div><div><b>02</b><span>اختبارات اختيارية ومقالية</span></div><div><b>03</b><span>نتائج ومحاولات محفوظة</span></div><div><b>04</b><span>إشراف مستر محمد عمارة</span></div></section>
     <section id="exams" class="section wrap"><div class="section-head"><div><span class="kicker">ASSESSMENT CENTER</span><h2>الامتحانات <i>الإلكترونية</i></h2><p>أسئلة اختيارية ومقالية، مع حفظ الإجابات ومراجعة دقة الإجابات المقالية.</p></div><span class="section-index">01 / EXAMS</span></div><div id="examGrid" class="cards-grid"><div class="loading-card">جاري تحميل الامتحانات...</div></div></section>
-    <section id="library" class="section wrap"><div class="section-head"><div><span class="kicker">LEARNING LIBRARY</span><h2>المكتبة <i>التعليمية</i></h2><p>مصادر وروابط يضيفها المدرس لتسهيل المذاكرة والمراجعة.</p></div><span class="section-index">02 / LIBRARY</span></div><div class="library-subsection">
-      <div class="library-subhead"><div><span class="kicker">MINISTRY WEEKLY ASSESSMENTS</span><h3>التقييمات الأسبوعية الرسمية</h3><p class="hint">العلوم المتكاملة · الصف الأول الثانوي · اللغة العربية · 2026/2027</p></div><span class="builder-chip">OFFICIAL PDFs</span></div>
+    <section id="library" class="section wrap"><div class="section-head"><div><span class="kicker">LEARNING LIBRARY</span><h2>المكتبة <i>التعليمية</i></h2><p>مصادر وروابط يضيفها المدرس لتسهيل المذاكرة والمراجعة.</p></div><span class="section-index">02 / LIBRARY</span></div><details class="library-accordion"><summary>التقييمات الأسبوعية الرسمية</summary>
+      
       <div id="ministryEvaluationGrid" class="cards-grid"></div>
-    </div>
-    <div class="library-subsection">
-      <div class="library-subhead"><div><span class="kicker">TEACHER MATERIALS</span><h3>ملفات مستر محمد عمارة</h3><p class="hint">ملفات PDF التي يرفعها المستر ستظهر هنا للطلاب تلقائيًا.</p></div><span class="builder-chip">TEACHER PDFs</span></div>
+    </details>
+    <details class="library-accordion"><summary>ملفات PDF من المستر</summary>
+      
       <div id="teacherPdfGrid" class="cards-grid"><div class="loading-card">جاري تحميل ملفات المستر...</div></div>
-    </div>
-    <div class="library-subsection">
-      <div class="library-subhead"><div><span class="kicker">MORE RESOURCES</span><h3>مصادر وروابط إضافية</h3></div></div>
+    </details>
+    <details class="library-accordion"><summary>مصادر وروابط إضافية</summary>
+      
       <div id="resourceGrid" class="cards-grid"><div class="loading-card">جاري تحميل المصادر...</div></div>
-    </div>
+    </details>
     <p class="ministry-library-link"><a href="https://ellibrary.moe.gov.eg/Performance_Assessments" target="_blank" rel="noopener noreferrer">فتح المكتبة الإلكترونية الرسمية للوزارة ↗</a></p></section>
     <section id="announcements" class="section wrap"><div class="section-head"><div><span class="kicker">LATEST UPDATES</span><h2>آخر <i>الإعلانات</i></h2><p>تابع التعليمات والمواعيد والتحديثات المنشورة.</p></div><span class="section-index">03 / UPDATES</span></div><div id="announcementList" class="announcement-list"><div class="loading-card">جاري تحميل الإعلانات...</div></div></section>
     <section id="dashboard" class="section wrap" hidden><div class="section-head"><div><span class="kicker">MY LEARNING</span><h2>لوحة <i>إنجازي</i></h2><p>محاولاتك ونتائجك السابقة.</p></div><span class="section-index">04 / DASHBOARD</span></div><div id="attemptList" class="attempt-list"></div><div class="reports-section"><div class="reports-heading"><span class="kicker">MY PRIVATE REPORTS</span><h3>تقاريري التفصيلية</h3><p class="hint">تقارير محفوظة لكل محاولة، مع مراجعة الإجابات الخاطئة عندما يسمح إعداد الامتحان.</p></div><div id="studentReportList" class="report-list"><div class="empty-state">جاري تحميل تقاريرك...</div></div></div></section>
