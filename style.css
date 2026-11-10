@@ -697,3 +697,18 @@ dialog#examDialog .exam-question-prompt pre {
 .library-accordion[open]>summary::after{transform:rotate(180deg)}
 .library-accordion>.cards-grid{padding:16px}
 @media(max-width:600px){.library-accordion{margin:10px 0;border-radius:13px}.library-accordion>summary{min-height:52px;padding:12px 14px;font-size:14px}.library-accordion>.cards-grid{padding:12px}}
+
+
+/* Collapsible main page sections */
+.section-accordion{display:block;}
+.section-accordion>summary{list-style:none;cursor:pointer;}
+.section-accordion>summary::-webkit-details-marker{display:none;}
+.section-accordion>summary::marker{content:"";}
+.section-accordion-summary{position:relative;}
+.section-accordion-summary::after{content:"＋";position:absolute;left:0;top:50%;transform:translateY(-50%);width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--cyan);font-size:20px;transition:transform .2s ease,background .2s ease;}
+.section-accordion[open]>summary::after{content:"−";background:rgba(101,216,208,.08);}
+.section-accordion>summary .section-head{margin-bottom:0;padding-left:48px;}
+.section-accordion:not([open]){padding-bottom:4px;}
+.section-accordion[open]>summary{margin-bottom:24px;}
+.section-accordion>summary:focus-visible{outline:2px solid var(--cyan);outline-offset:5px;border-radius:12px;}
+@media(max-width:640px){.section-accordion>summary .section-head{padding-left:42px;}}
