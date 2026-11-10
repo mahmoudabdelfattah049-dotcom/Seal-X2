@@ -580,16 +580,31 @@ async function submitPdfUpload(event){
  form.reset();button.disabled=false;setStatus("#pdfUploadStatus","تم رفع الملف ونشره للطلاب بنجاح.");toast("تم نشر ملف PDF في المكتبة.");await loadResources();
 }
 
+function openAccordionDestination(id){
+ if(!id)return null;
+ let destination=null;
+ try{destination=document.getElementById(decodeURIComponent(id));}catch(error){return null;}
+ if(!destination)return null;
+ // Open the target itself and every collapsed details parent, from inside out.
+ let current=destination;
+ while(current){
+  if(current instanceof HTMLDetailsElement)current.open=true;
+  current=current.parentElement;
+ }
+ return destination;
+}
 function bindEvents(){
- // Open a collapsed destination before the browser scrolls to an in-page link.
+ // Handle every in-page navigation link, including hero buttons and the mobile menu.
  document.addEventListener("click",event=>{
-  const link=event.target.closest('a[href^="#"]');
+  const clicked=event.target instanceof Element?event.target:event.target?.parentElement;
+  const link=clicked?.closest('a[href^="#"]');
   if(!link)return;
-  const id=decodeURIComponent(link.getAttribute("href").slice(1));
-  if(!id)return;
-  const destination=document.getElementById(id);
-  if(destination instanceof HTMLDetailsElement)destination.open=true;
+  const hash=link.getAttribute("href").slice(1);
+  openAccordionDestination(hash);
  },true);
+ // Also support direct links and browser back/forward navigation to a collapsed section.
+ window.addEventListener("hashchange",()=>openAccordionDestination(window.location.hash.slice(1)));
+ if(window.location.hash)openAccordionDestination(window.location.hash.slice(1));
  $("#year").textContent=new Date().getFullYear();
  $("#authOpen").addEventListener("click",()=>{setAuthMode("login");$("#authDialog").showModal()});
  $("#authClose").addEventListener("click",()=>$("#authDialog").close());
@@ -653,6 +668,8 @@ function bindEvents(){
  $("#examDialog").addEventListener("click",e=>{if(e.target===$("#examDialog"))toast("الوقت يستمر أثناء الامتحان؛ ارجع للأسئلة وأكمل الحل.")});
 }
 document.addEventListener("DOMContentLoaded",async()=>{
+ // Every main section and library subsection starts collapsed on every fresh page load.
+ document.querySelectorAll("details.section-accordion,details.library-accordion").forEach(item=>{item.open=false;});
  bindEvents();addQuestion();setAuthMode("login");await refreshSession();
  db.auth.onAuthStateChange((_event,session)=>{
   sessionUser=session?.user||null;
