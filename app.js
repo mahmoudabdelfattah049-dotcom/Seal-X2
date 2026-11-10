@@ -669,7 +669,7 @@ function bindEvents(){
 }
 document.addEventListener("DOMContentLoaded",async()=>{
  // Every main section and library subsection starts collapsed on every fresh page load.
- document.querySelectorAll("details.section-accordion,details.library-accordion").forEach(item=>{item.open=false;});
+ document.querySelectorAll("details").forEach(item=>{item.open=false;});
  bindEvents();addQuestion();setAuthMode("login");await refreshSession();
  db.auth.onAuthStateChange((_event,session)=>{
   sessionUser=session?.user||null;
