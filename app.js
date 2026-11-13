@@ -319,14 +319,15 @@ function readExamSource(source){
  if(!source.trim())throw new Error("الصق كود ملف الامتحان أولاً.");
  if(/(^|\n)\s*Q2Q\b/.test(source))return readMarkedExamSource(source);
  const doc=new DOMParser().parseFromString(source,"text/html"),scripts=[...doc.querySelectorAll("script")].map(x=>x.textContent||""),jsSource=scripts.join("\n")||source;
- const match=jsSource.match(/\b(?:const|let|var)\s+questions\s*=\s*/);
- if(!match)throw new Error("لم أجد Q2Q أو مصفوفة questions داخل الكود.");
+ // Accept uppercase QUESTIONS as used by imported teacher HTML files.
+ const match=jsSource.match(/\b(?:const|let|var)\s+(?:questions|questionBank)\s*=\s*/i);
+ if(!match)throw new Error("لم أجد Q2Q أو مصفوفة أسئلة باسم questions أو QUESTIONS داخل الكود.");
  const questions=parseJsLiteral(jsSource,match.index+match[0].length);
  if(!Array.isArray(questions)||!questions.length)throw new Error("مصفوفة الأسئلة فارغة أو ليست مصفوفة صحيحة.");
  if(questions.length>200)throw new Error("الحد الأقصى للاستيراد هو 200 سؤال.");
  const normalized=questions.map((q,i)=>{
   if(!q||typeof q!=="object"||Array.isArray(q))throw new Error("السؤال رقم "+(i+1)+" ليس كائن سؤال صحيحًا.");
-  const prompt=String(q.q??q.prompt??"").trim(),options=q.opts??q.options,correct=Number(q.ans??q.correct_option);
+  const prompt=String(q.q??q.prompt??q.question??"").trim(),options=q.opts??q.options??q.choices,rawCorrect=q.ans??q.correct_option??q.correct,correct=Number(rawCorrect);
   if(!prompt)throw new Error("نص السؤال رقم "+(i+1)+" غير موجود.");
   if(!Array.isArray(options)||options.length<2||options.length>6||options.some(x=>typeof x!=="string"||!x.trim()))throw new Error("السؤال رقم "+(i+1)+" يجب أن يحتوي على اختيارين إلى ستة اختيارات.");
   if(!Number.isInteger(correct)||correct<0||correct>=options.length)throw new Error("رقم الإجابة الصحيحة في السؤال رقم "+(i+1)+" غير صحيح.");
