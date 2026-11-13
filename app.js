@@ -334,7 +334,7 @@ function readExamSource(source){
   return {prompt,question_type:"mcq",options:options.map(x=>x.trim()),correct_option:correct,points:Number(q.points??1),model_answer:""};
  });
  if(normalized.some(q=>!Number.isInteger(q.points)||q.points<1||q.points>100))throw new Error("درجة كل سؤال اختياري يجب أن تكون من 1 إلى 100.");
- const title=(doc.querySelector("title")?.textContent||"").trim(),lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim(),timeMatch=jsSource.match(/\btimeLeft\s*=\s*(\d+)\s*;/),duration=timeMatch?Math.round(Number(timeMatch[1])/60):null;
+ const title=(doc.querySelector("title")?.textContent||"").trim(),lesson=(doc.querySelector(".timer-box span")?.textContent||doc.querySelector("header p")?.textContent||"").trim(),examDurationMatch=jsSource.match(/\bEXAM_DURATION_SECONDS\s*=\s*(\d+)\s*\*\s*60\b/),timeMatch=jsSource.match(/\btimeLeft\s*=\s*(\d+)\s*;/),duration=examDurationMatch?Number(examDurationMatch[1]):timeMatch?Math.round(Number(timeMatch[1])/60):null;
  return {title,description:lesson,duration:duration&&duration>=5&&duration<=180?duration:null,questions:normalized};
 }
 function importExamCode(){
